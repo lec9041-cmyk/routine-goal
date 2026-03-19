@@ -133,6 +133,22 @@ const initialRoutines: Routine[] = [];
 
 const initialProjects: Project[] = [];
 
+const loadFromLocalStorage = <T,>(key: string, fallback: T): T => {
+  const saved = localStorage.getItem(key);
+
+  if (!saved) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(saved) as T;
+  } catch {
+    console.warn(`[DataContext] Failed to parse localStorage key: ${key}`);
+    localStorage.removeItem(key);
+    return fallback;
+  }
+};
+
 const normalizeCompletedDates = (completedDates: string[] = []) => {
   return Array.from(new Set(completedDates)).sort((a, b) => a.localeCompare(b));
 };
@@ -144,33 +160,27 @@ const getRoutineTrackedCount = (routine: Routine, referenceDate: Date = new Date
 // Provider component
 export function DataProvider({ children }: { children: ReactNode }) {
   const [todos, setTodos] = useState<Todo[]>(() => {
-    const saved = localStorage.getItem('routiner-todos');
-    return saved ? JSON.parse(saved) : initialTodos;
+    return loadFromLocalStorage('routiner-todos', initialTodos);
   });
 
   const [goals, setGoals] = useState<Goal[]>(() => {
-    const saved = localStorage.getItem('routiner-goals');
-    return saved ? JSON.parse(saved) : initialGoals;
+    return loadFromLocalStorage('routiner-goals', initialGoals);
   });
 
   const [routines, setRoutines] = useState<Routine[]>(() => {
-    const saved = localStorage.getItem('routiner-routines');
-    return saved ? JSON.parse(saved) : initialRoutines;
+    return loadFromLocalStorage('routiner-routines', initialRoutines);
   });
 
   const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('routiner-projects');
-    return saved ? JSON.parse(saved) : initialProjects;
+    return loadFromLocalStorage('routiner-projects', initialProjects);
   });
 
   const [todoCategories, setTodoCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('routiner-todo-categories');
-    return saved ? JSON.parse(saved) : ["업무", "개인", "학습", "건강", "기타"];
+    return loadFromLocalStorage('routiner-todo-categories', ["업무", "개인", "학습", "건강", "기타"]);
   });
 
   const [goalCategories, setGoalCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('routiner-goal-categories');
-    return saved ? JSON.parse(saved) : ["건강", "학습", "업무", "개인", "기타"];
+    return loadFromLocalStorage('routiner-goal-categories', ["건강", "학습", "업무", "개인", "기타"]);
   });
 
   // Save to localStorage whenever data changes
