@@ -2,11 +2,10 @@ import { useState } from "react";
 import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Folder } from "lucide-react";
 import { useData } from "../context/DataContext";
 import {
-  getRoutineCompletionTogglePatch,
   getRoutineDisplayCount,
   isRoutineCompleted,
 } from "../utils/routineProgress";
-import { formatDateString, isSameDay, matchesDueDate } from "../utils/dateUtils";
+import { formatDateString, isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
 
@@ -15,7 +14,7 @@ interface MainDashboardProps {
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
-  const { todos, routines, toggleTodo, addTodo, updateRoutine } = useData();
+  const { todos, routines, toggleTodo, addTodo, toggleRoutineForDate } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
@@ -54,7 +53,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
   const totalRoutines = isSelectedToday ? routines.length : 0;
-  const completedRoutinesCount = isSelectedToday ? routines.filter(isRoutineCompleted).length : 0;
+  const completedRoutinesCount = isSelectedToday ? routines.filter((routine) => isRoutineCompleted(routine, today)).length : 0;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -381,8 +380,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               </div>
 
               {routines.map((routine) => {
-                const isCompleted = isRoutineCompleted(routine);
-                const displayCount = getRoutineDisplayCount(routine);
+                const isCompleted = isRoutineCompleted(routine, today);
+                const displayCount = getRoutineDisplayCount(routine, today);
 
                 return (
                   <div
@@ -393,7 +392,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                   >
                     <button
                       onClick={() =>
-                        updateRoutine(routine.id, getRoutineCompletionTogglePatch(routine))
+                        toggleRoutineForDate(routine.id, toDateKey(today))
                       }
                       className="w-full flex items-center gap-2.5 p-2.5"
                     >

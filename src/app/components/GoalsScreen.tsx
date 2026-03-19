@@ -139,14 +139,13 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       frequency: newRoutine.frequency,
       targetCount: newRoutine.targetCount,
       currentCount: 0,
+      completedDates: [],
       trackingType: newRoutine.trackingType,
       selectedDays: newRoutine.selectedDays,
       linkedGoalId: selectedGoalId,
       color: "bg-blue-500",
       streak: 0,
       timeOfDay: "anytime" as const, // 루틴 탭에서도 표시되도록 timeOfDay 추가
-      weeklyCount: newRoutine.frequency === "weekly" ? 0 : undefined,
-      monthlyCount: newRoutine.frequency === "monthly" ? 0 : undefined,
       bestStreak: 0,
     };
 

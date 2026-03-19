@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getRoutineCountForPeriod } from '../utils/routineProgress';
+import { toDateKey } from '../utils/dateUtils';
 
 // Types
 export interface SubTask {
@@ -131,16 +133,12 @@ const initialRoutines: Routine[] = [];
 
 const initialProjects: Project[] = [];
 
-const getRoutineTrackedCount = (routine: Routine) => {
-  if (routine.frequency === 'weekly') {
-    return routine.weeklyCount ?? 0;
-  }
+const normalizeCompletedDates = (completedDates: string[] = []) => {
+  return Array.from(new Set(completedDates)).sort((a, b) => a.localeCompare(b));
+};
 
-  if (routine.frequency === 'monthly') {
-    return routine.monthlyCount ?? 0;
-  }
-
-  return routine.currentCount;
+const getRoutineTrackedCount = (routine: Routine, referenceDate: Date = new Date()) => {
+  return getRoutineCountForPeriod(routine, referenceDate);
 };
 
 // Provider component
@@ -236,22 +234,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Routine functions
   const addRoutine = (routine: Routine) => {
-    setRoutines(prev => [...prev, routine]);
+    const normalizedRoutine = {
+      ...routine,
+      completedDates: normalizeCompletedDates(routine.completedDates),
+    };
+
+    setRoutines(prev => [...prev, normalizedRoutine]);
     
-    if (routine.linkedGoalId) {
-      const trackedCount = getRoutineTrackedCount(routine);
+    if (normalizedRoutine.linkedGoalId) {
+      const trackedCount = getRoutineTrackedCount(normalizedRoutine);
       setGoals(prev => prev.map(g => {
-        if (g.id === routine.linkedGoalId) {
+        if (g.id === normalizedRoutine.linkedGoalId) {
           const linkedRoutine: LinkedRoutine = {
-            id: routine.id,
-            title: routine.title,
-            icon: routine.icon,
-            currentProgress: (trackedCount / routine.targetCount) * 100,
-            targetCount: routine.targetCount,
+            id: normalizedRoutine.id,
+            title: normalizedRoutine.title,
+            icon: normalizedRoutine.icon,
+            currentProgress: (trackedCount / normalizedRoutine.targetCount) * 100,
+            targetCount: normalizedRoutine.targetCount,
             currentCount: trackedCount,
-            frequency: routine.frequency,
-            trackingType: routine.trackingType,
-            selectedDays: routine.selectedDays,
+            frequency: normalizedRoutine.frequency,
+            trackingType: normalizedRoutine.trackingType,
+            selectedDays: normalizedRoutine.selectedDays,
           };
           return {
             ...g,
@@ -267,7 +270,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     let updatedRoutine: Routine | null = null;
     setRoutines(prev => prev.map(r => {
       if (r.id === id) {
-        updatedRoutine = { ...r, ...updates };
+        updatedRoutine = {
+          ...r,
+          ...updates,
+          completedDates: normalizeCompletedDates(updates.completedDates ?? r.completedDates),
+        };
         return updatedRoutine;
       }
       return r;
@@ -278,11 +285,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       linkedRoutines: g.linkedRoutines.map(lr => {
         if (lr.id === id) {
           const targetCount = updates.targetCount ?? lr.targetCount;
-          const trackedCount = updatedRoutine ? getRoutineTrackedCount(updatedRoutine) : (updates.currentCount ?? lr.currentCount);
+          const trackedCount = updatedRoutine ? getRoutineTrackedCount(updatedRoutine) : lr.currentCount;
           return {
             ...lr,
             title: updates.title ?? lr.title,
             icon: updates.icon ?? lr.icon,
+            frequency: updates.frequency ?? lr.frequency,
+            trackingType: updates.trackingType ?? lr.trackingType,
             currentCount: trackedCount,
             targetCount,
             currentProgress: (trackedCount / targetCount) * 100,
@@ -304,58 +313,79 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const incrementRoutine = (id: string) => {
-    let updatedRoutine: Routine | null = null;
-    setRoutines(prev => prev.map(r => {
-      if (r.id === id) {
-        if (r.frequency === 'weekly') {
-          const nextCount = Math.min((r.weeklyCount ?? 0) + 1, r.targetCount);
-          updatedRoutine = { ...r, weeklyCount: nextCount };
-          return updatedRoutine;
+    const todayKey = toDateKey(new Date());
+
+    setRoutines(prev => {
+      const updatedRoutines = prev.map(r => {
+        if (r.id !== id) return r;
+
+        const completedDates = normalizeCompletedDates(r.completedDates);
+        if (completedDates.includes(todayKey)) {
+          return r;
         }
 
-        if (r.frequency === 'monthly') {
-          const nextCount = Math.min((r.monthlyCount ?? 0) + 1, r.targetCount);
-          updatedRoutine = { ...r, monthlyCount: nextCount };
-          return updatedRoutine;
-        }
+        return { ...r, completedDates: normalizeCompletedDates([...completedDates, todayKey]) };
+      });
 
-        const nextCount = Math.min(r.currentCount + 1, r.targetCount);
-        updatedRoutine = { ...r, currentCount: nextCount };
-        return updatedRoutine;
-      }
-      return r;
-    }));
-    
-    setGoals(prev => prev.map(g => ({
-      ...g,
-      linkedRoutines: g.linkedRoutines.map(lr => {
-        if (lr.id === id) {
-          const nextCount = updatedRoutine
-            ? getRoutineTrackedCount(updatedRoutine)
-            : Math.min(lr.currentCount + 1, lr.targetCount);
+      setGoals(currentGoals => currentGoals.map(g => ({
+        ...g,
+        linkedRoutines: g.linkedRoutines.map(lr => {
+          const updatedRoutine = updatedRoutines.find(r => r.id === lr.id);
+          if (!updatedRoutine) {
+            return lr;
+          }
+
+          const currentCount = getRoutineTrackedCount(updatedRoutine);
           return {
             ...lr,
-            currentCount: nextCount,
-            currentProgress: (nextCount / lr.targetCount) * 100,
+            currentCount,
+            currentProgress: (currentCount / lr.targetCount) * 100,
           };
-        }
-        return lr;
-      })
-    })));
+        })
+      })));
+
+      return updatedRoutines;
+    });
   };
 
   const toggleRoutineForDate = (id: string, dateString: string) => {
-    setRoutines(prev => prev.map(r => {
-      if (r.id === id) {
-        const completedDates = r.completedDates || [];
-        const index = completedDates.indexOf(dateString);
-        const newCompletedDates = index > -1 
+    setRoutines(prev => {
+      const updatedRoutines = prev.map(r => {
+        if (r.id !== id) {
+          return r;
+        }
+
+        const completedDates = normalizeCompletedDates(r.completedDates);
+        const hasDate = completedDates.includes(dateString);
+        const toggledDates = hasDate
           ? completedDates.filter(d => d !== dateString)
           : [...completedDates, dateString];
-        return { ...r, completedDates: newCompletedDates };
-      }
-      return r;
-    }));
+
+        return {
+          ...r,
+          completedDates: normalizeCompletedDates(toggledDates),
+        };
+      });
+
+      setGoals(currentGoals => currentGoals.map(g => ({
+        ...g,
+        linkedRoutines: g.linkedRoutines.map(lr => {
+          const updatedRoutine = updatedRoutines.find(r => r.id === lr.id);
+          if (!updatedRoutine) {
+            return lr;
+          }
+
+          const currentCount = getRoutineTrackedCount(updatedRoutine);
+          return {
+            ...lr,
+            currentCount,
+            currentProgress: (currentCount / lr.targetCount) * 100,
+          };
+        })
+      })));
+
+      return updatedRoutines;
+    });
   };
 
   // Project functions
