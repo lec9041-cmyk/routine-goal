@@ -9,7 +9,7 @@ interface MainDashboardProps {
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
-  const { todos, toggleTodo, routines, toggleRoutineForDate, addTodo, goals } = useData();
+  const { todos, toggleTodo, addTodo } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
@@ -54,11 +54,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   // 선택한 날짜가 오늘인지 확인
   const isSelectedToday = selectedDate.toDateString() === today.toDateString();
   
-  // 데일리 루틴 - 선택한 날짜에 해당하는 루틴만 표시
-  const dailyRoutines = routines.filter((routine) => {
-    return routine.frequency === "daily";
-  });
-
   // 카테고리별 색상 매핑 (배경 포함)
   const categoryStyles: { [key: string]: { bg: string; text: string } } = {
     "업무": { bg: "bg-gradient-to-r from-blue-100 to-blue-200", text: "text-blue-700" },
@@ -75,15 +70,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
   // 진행률 계산 (미완료 할일 + 루틴)
   const totalTodos = incompleteTodos.length;
-  const totalRoutines = dailyRoutines.length;
-  
-  // 선택한 날짜에 완료된 루틴 개수
-  const completedRoutinesCount = dailyRoutines.filter(r => 
-    r.completedDates?.includes(selectedDateString)
-  ).length;
-  
-  const totalItems = totalTodos + totalRoutines;
-  const completedItems = completedTodos.length + completedRoutinesCount;
+  const totalItems = totalTodos;
+  const completedItems = completedTodos.length;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   const handleQuickAdd = () => {
@@ -144,15 +132,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const goToToday = () => {
     setWeekOffset(0);
     setSelectedDate(today);
-  };
-
-  // 루틴이 연동된 목표 찾기
-  const getGoalForRoutine = (routineId: string) => {
-    const routine = routines.find(r => r.id === routineId);
-    if (routine?.linkedGoalId) {
-      return goals.find(g => g.id === routine.linkedGoalId);
-    }
-    return null;
   };
 
   return (
@@ -304,46 +283,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             </div>
           ))}
 
-          {/* 루틴 소제목 */}
-          {dailyRoutines.length > 0 && (
-            <h3 className="text-[12px] font-bold text-gray-500 mt-3 mb-1 px-1">루틴</h3>
-          )}
-
-          {/* 루틴 표시 */}
-          {dailyRoutines.map((routine) => {
-            const isCompletedToday = routine.completedDates?.includes(selectedDateString) || false;
-            const linkedGoal = getGoalForRoutine(routine.id);
-            
-            return (
-              <div
-                key={routine.id}
-                className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm"
-              >
-                <button
-                  onClick={() => toggleRoutineForDate(routine.id, selectedDateString)}
-                  className="w-full flex items-center gap-2.5 p-2.5"
-                >
-                  {isCompletedToday ? (
-                    <CheckCircle2 className="w-4.5 h-4.5 text-orange-500 flex-shrink-0" />
-                  ) : (
-                    <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
-                  )}
-                  
-                  <div className="flex-1 text-left min-w-0">
-                    <p className={`text-[13.5px] leading-snug ${isCompletedToday ? "text-gray-400 line-through" : "text-gray-900 font-medium"}`}>
-                      {linkedGoal && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gradient-to-r from-green-100 to-green-200 text-green-700 text-[10px] font-bold mr-1">
-                          {linkedGoal.title}
-                        </span>
-                      )}
-                      {routine.icon} {routine.title}
-                    </p>
-                  </div>
-                </button>
-              </div>
-            );
-          })}
-
           {/* 완료한 할일 소제목 */}
           {completedTodos.length > 0 && (
             <h3 className="text-[12px] font-bold text-gray-400 mt-4 mb-1 px-1">완료</h3>
@@ -380,7 +319,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           ))}
 
           {/* 할일과 루틴이 모두 없을 때 */}
-          {selectedDateTodos.length === 0 && dailyRoutines.length === 0 && (
+          {selectedDateTodos.length === 0 && (
             <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 text-center">
               <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-500 text-[13px]">할일이 없습니다</p>
