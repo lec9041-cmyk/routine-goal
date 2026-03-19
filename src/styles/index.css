@@ -1,3 +1,28 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+:root {
+  --bottom-tab-height: 72px;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+@supports (height: 100dvh) {
+  .app-shell {
+    min-height: 100dvh;
+  }
+}
+
+.app-scroll-container {
+  padding-bottom: calc(var(--bottom-tab-height) + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+
+.bottom-tab-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
