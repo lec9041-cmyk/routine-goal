@@ -33,6 +33,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const { routines, addRoutine, deleteRoutine, toggleRoutineForDate } = useData();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRoutineMenu, setShowRoutineMenu] = useState<string | null>(null);
+  const allowPastDateEditing = false;
   
   // shouldOpenAddModal이 true면 모달 열기
   useEffect(() => {
@@ -59,6 +60,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const [viewMode, setViewMode] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const today = new Date();
   const todayKey = toDateKey(today);
+  const [selectedDateKey, setSelectedDateKey] = useState(todayKey);
+  const selectedDate = new Date(`${selectedDateKey}T00:00:00`);
+  const isSelectedDateToday = selectedDateKey === todayKey;
 
   const iconOptions = ["⭐", "💧", "💪", "🧘", "📚", "📖", "🏃", "🎨", "🎵", "🍎", "☕", "🌱", "✍️", "🧠", "❤️"];
   const categoryOptions = ["건강", "학습", "자기계발", "취미", "업무", "관계"];
@@ -113,7 +117,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   };
 
   const toggleRoutineComplete = (routine: Routine) => {
-    toggleRoutineForDate(routine.id, todayKey);
+    if (!allowPastDateEditing && !isSelectedDateToday) return;
+    toggleRoutineForDate(routine.id, selectedDateKey);
   };
 
   const filteredRoutines = routines.filter((routine) => {
@@ -124,7 +129,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const getTotalProgress = (routines: Routine[]) => {
     if (routines.length === 0) return 0;
     const totalCompleted = routines.reduce((sum, r) => {
-      return sum + (isRoutineCompleted(r, today) ? 1 : 0);
+      return sum + (isRoutineCompleted(r, selectedDate) ? 1 : 0);
     }, 0);
     return Math.round((totalCompleted / routines.length) * 100);
   };
@@ -161,10 +166,11 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
         </h3>
         <div className="space-y-2.5 px-5">
           {routines.map((routine) => {
-            const isCompleted = isRoutineCompleted(routine, today);
-            const displayCount = getRoutineDisplayCount(routine, today);
-            const periodCount = getRoutineCountForPeriod(routine, today);
+            const isCompleted = isRoutineCompleted(routine, selectedDate);
+            const displayCount = getRoutineDisplayCount(routine, selectedDate);
+            const periodCount = getRoutineCountForPeriod(routine, selectedDate);
             const progressPercentage = (periodCount / routine.targetCount) * 100;
+            const canToggle = allowPastDateEditing || isSelectedDateToday;
 
             return (
               <div
@@ -174,8 +180,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => toggleRoutineComplete(routine)}
-                    className="flex-shrink-0 hover:scale-105 transition-transform"
+                    className={`flex-shrink-0 transition-transform ${canToggle ? "hover:scale-105" : "opacity-40 cursor-not-allowed"}`}
                     aria-label={`${routine.title} 완료 체크`}
+                    disabled={!canToggle}
                   >
                     {isCompleted ? (
                       <CheckCircle2 className="w-5 h-5 text-blue-500" />
@@ -215,9 +222,14 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-gray-600 font-bold">
-                        {displayCount}/{routine.targetCount}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] text-gray-600 font-bold">
+                          {displayCount}/{routine.targetCount}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          하루 1회 체크, 다시 누르면 취소
+                        </span>
+                      </div>
                       {/* Streak Info */}
                       <div className="flex items-center gap-1">
                         <Flame className="w-3.5 h-3.5 text-orange-400" />
@@ -302,14 +314,38 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
       {/* Today's Progress */}
       <div className="px-5 py-5">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm px-4 py-3 mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold text-gray-700">체크 정책</p>
+              <p className="text-[11px] text-gray-500">하루 1회 체크, 다시 누르면 취소</p>
+            </div>
+            {allowPastDateEditing ? (
+              <label className="flex items-center gap-2 text-[11px] text-gray-600">
+                <CalendarIcon className="w-3.5 h-3.5" />
+                <input
+                  type="date"
+                  value={selectedDateKey}
+                  onChange={(e) => setSelectedDateKey(e.target.value)}
+                  className="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px] text-gray-700"
+                />
+              </label>
+            ) : (
+              <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md">
+                오늘만 수정 가능
+              </span>
+            )}
+          </div>
+        </div>
+
         <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-5 shadow-sm mb-5">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-purple-600 text-[12px] mb-1 font-medium">
                 {viewMode === "all" && "전체 루틴"}
-                {viewMode === "daily" && "오늘의 루틴"}
-                {viewMode === "weekly" && "이번 주 루틴"}
-                {viewMode === "monthly" && "이번 달 루틴"}
+                {viewMode === "daily" && (isSelectedDateToday ? "오늘의 루틴" : "선택한 날짜 루틴")}
+                {viewMode === "weekly" && (isSelectedDateToday ? "이번 주 루틴" : "선택한 날짜 기준 주간 루틴")}
+                {viewMode === "monthly" && (isSelectedDateToday ? "이번 달 루틴" : "선택한 날짜 기준 월간 루틴")}
               </p>
               <p className="text-purple-900 text-2xl font-bold">
                 {filteredRoutines.length}개

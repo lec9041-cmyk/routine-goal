@@ -14,11 +14,11 @@ interface MainDashboardProps {
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
-  const { todos, routines, toggleTodo, addTodo, toggleRoutineForDate } = useData();
+  const { todos, routines, projects, toggleTodo, addTodo, toggleRoutineForDate } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
-  const [activeTab, setActiveTab] = useState<"todo" | "routine">("todo");
+  const [activeFilter, setActiveFilter] = useState<"all" | "todo" | "routine">("all");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekOffset, setWeekOffset] = useState(0); // 주 단위 오프셋
@@ -234,9 +234,19 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
         <div className="flex items-center gap-2 mb-3">
           <button
-            onClick={() => setActiveTab("todo")}
+            onClick={() => setActiveFilter("all")}
             className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
-              activeTab === "todo"
+              activeFilter === "all"
+                ? "bg-indigo-500 text-white"
+                : "bg-white/70 text-gray-600"
+            }`}
+          >
+            통합
+          </button>
+          <button
+            onClick={() => setActiveFilter("todo")}
+            className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
+              activeFilter === "todo"
                 ? "bg-blue-500 text-white"
                 : "bg-white/70 text-gray-600"
             }`}
@@ -244,9 +254,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             할일
           </button>
           <button
-            onClick={() => setActiveTab("routine")}
+            onClick={() => setActiveFilter("routine")}
             className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
-              activeTab === "routine"
+              activeFilter === "routine"
                 ? "bg-purple-500 text-white"
                 : "bg-white/70 text-gray-600"
             }`}
@@ -256,7 +266,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
         </div>
 
         <div className="space-y-1.5">
-          {activeTab === "todo" && (
+          {(activeFilter === "all" || activeFilter === "todo") && (
             <>
           {/* 할일 소제목 */}
           {incompleteTodos.length > 0 && (
@@ -353,10 +363,10 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           ))}
 
           {/* 할일과 루틴이 모두 없을 때 */}
-          {selectedDateTodos.length === 0 && (
+          {selectedDateTodos.length === 0 && activeFilter === "todo" && (
             <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 text-center">
               <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-[13px]">할일이 없습니다</p>
+              <p className="text-gray-500 text-[13px]">할일 없음</p>
               <button
                 onClick={() => setShowQuickAdd(true)}
                 className="mt-3 text-blue-600 text-[13px] font-semibold"
@@ -368,7 +378,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             </>
           )}
 
-          {activeTab === "routine" && (
+          {(activeFilter === "all" || activeFilter === "routine") && (
             <>
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-[12px] font-bold text-gray-500">루틴</h3>
@@ -380,9 +390,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 </button>
               </div>
 
-              {routines.map((routine) => {
-                const isCompleted = isRoutineCompleted(routine, today);
-                const displayCount = getRoutineDisplayCount(routine, today);
+              {selectedDateRoutines.map((routine) => {
+                const displayCount = routine.completedCount;
+                const isCompleted = routine.isCompleted;
 
                 return (
                   <div
@@ -393,7 +403,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                   >
                     <button
                       onClick={() =>
-                        toggleRoutineForDate(routine.id, toDateKey(today))
+                        toggleRoutineForDate(routine.id, toDateKey(selectedDate))
                       }
                       className="w-full flex items-center gap-2.5 p-2.5"
                     >
@@ -426,10 +436,10 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 );
               })}
 
-              {routines.length === 0 && (
+              {selectedDateRoutines.length === 0 && activeFilter === "routine" && (
                 <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 text-center">
                   <Target className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-[13px]">루틴이 없습니다</p>
+                  <p className="text-gray-500 text-[13px]">루틴 없음</p>
                   <button
                     onClick={() => onNavigate("goals-routines")}
                     className="mt-3 text-purple-600 text-[13px] font-semibold"
@@ -439,6 +449,13 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 </div>
               )}
             </>
+          )}
+
+          {activeFilter === "all" && totalItems === 0 && (
+            <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 text-center">
+              <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-[13px]">항목 없음</p>
+            </div>
           )}
         </div>
       </div>
