@@ -31,6 +31,16 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   // 미완료 할일과 완료 할일 분리
   const incompleteTodos = selectedDateTodos.filter(t => !t.completed);
   const completedTodos = selectedDateTodos.filter(t => t.completed);
+  const selectedDateRoutines = routines.map((routine) => {
+    const completedCount = getRoutineDisplayCount(routine, selectedDate);
+    const isCompleted = isRoutineCompleted(routine, selectedDate);
+
+    return {
+      ...routine,
+      completedCount,
+      isCompleted,
+    };
+  });
 
   // 선택한 날짜가 오늘인지 확인
   const isSelectedToday = isSameDay(selectedDate, today);
@@ -52,8 +62,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   // 진행률 계산 (선택 날짜 기준 할일 + 루틴 통합)
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
-  const totalRoutines = routines.length;
-  const completedRoutinesCount = routines.filter((routine) => isRoutineCompleted(routine, selectedDate)).length;
+  const totalRoutines = selectedDateRoutines.length;
+  const completedRoutinesCount = selectedDateRoutines.filter((routine) => routine.isCompleted).length;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
