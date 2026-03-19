@@ -49,26 +49,17 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     return categoryStyles[category] || categoryStyles["기타"];
   };
 
-  const selectedDateRoutines = routines.map((routine) => {
-    const completedCount = getRoutineDisplayCount(routine, selectedDate);
-    const isCompleted = isRoutineCompleted(routine, selectedDate);
-
-    return {
-      ...routine,
-      completedCount,
-      isCompleted,
-    };
-  });
-
-  const completedRoutinesCount = selectedDateRoutines.filter((routine) => routine.isCompleted).length;
-
-  // 진행률 계산 (할일 + 루틴 통합)
+  // 진행률 계산 (선택 날짜 기준 할일 + 루틴 통합)
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
-  const totalRoutines = selectedDateRoutines.length;
+  const totalRoutines = routines.length;
+  const completedRoutinesCount = routines.filter((routine) => isRoutineCompleted(routine, selectedDate)).length;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const progressTitle = isSelectedToday
+    ? "오늘 진행률"
+    : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 진행률`;
 
   const handleQuickAdd = () => {
     if (!quickAddText.trim()) return;
@@ -211,9 +202,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
       <div className="px-4 pb-3">
         <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/80 shadow-sm">
           <div className="flex items-center justify-between mb-1.5">
-            <h3 className="text-[13px] font-bold text-gray-700">
-              {isSelectedToday ? "오늘 통합 진행률" : "선택 날짜 통합 진행률"}
-            </h3>
+            <h3 className="text-[13px] font-bold text-gray-700">{progressTitle}</h3>
             <span className="text-[16px] font-bold text-blue-600">{progressPercentage}%</span>
           </div>
           <div className="w-full bg-gray-200/50 rounded-full h-2">
