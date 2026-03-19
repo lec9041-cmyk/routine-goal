@@ -49,14 +49,17 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     return categoryStyles[category] || categoryStyles["기타"];
   };
 
-  // 진행률 계산 (할일 + 루틴 통합)
+  // 진행률 계산 (선택 날짜 기준 할일 + 루틴 통합)
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
-  const totalRoutines = isSelectedToday ? routines.length : 0;
-  const completedRoutinesCount = isSelectedToday ? routines.filter((routine) => isRoutineCompleted(routine, today)).length : 0;
+  const totalRoutines = routines.length;
+  const completedRoutinesCount = routines.filter((routine) => isRoutineCompleted(routine, selectedDate)).length;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const progressTitle = isSelectedToday
+    ? "오늘 진행률"
+    : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 진행률`;
 
   const handleQuickAdd = () => {
     if (!quickAddText.trim()) return;
@@ -195,26 +198,24 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
         </div>
       </div>
 
-      {/* 진행률 표시 (선택한 날짜가 오늘일 때만) */}
-      {isSelectedToday && (
-        <div className="px-4 pb-3">
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/80 shadow-sm">
-            <div className="flex items-center justify-between mb-1.5">
-              <h3 className="text-[13px] font-bold text-gray-700">오늘 진행률</h3>
-              <span className="text-[16px] font-bold text-blue-600">{progressPercentage}%</span>
-            </div>
-            <div className="w-full bg-gray-200/50 rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full h-2 transition-all duration-500"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-gray-500 mt-1.5">
-              {completedItems} / {totalItems} 완료
-            </p>
+      {/* 진행률 표시 */}
+      <div className="px-4 pb-3">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/80 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <h3 className="text-[13px] font-bold text-gray-700">{progressTitle}</h3>
+            <span className="text-[16px] font-bold text-blue-600">{progressPercentage}%</span>
           </div>
+          <div className="w-full bg-gray-200/50 rounded-full h-2">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full h-2 transition-all duration-500"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+          <p className="text-[11px] text-gray-500 mt-1.5">
+            {completedItems} / {totalItems} 완료
+          </p>
         </div>
-      )}
+      </div>
 
       {/* 선택한 날짜의 할일과 루틴 */}
       <div className="px-4 pb-3">
