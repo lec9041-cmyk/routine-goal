@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu } from "lucide-react";
+import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Folder } from "lucide-react";
 import { useData } from "../context/DataContext";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
@@ -9,7 +9,7 @@ interface MainDashboardProps {
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
-  const { todos, toggleTodo, addTodo } = useData();
+  const { todos, toggleTodo, addTodo, projects } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
@@ -272,6 +272,18 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                     </span>
                     {todo.title}
                   </p>
+                  {todo.projectId && (() => {
+                    const project = projects.find(p => p.id === todo.projectId);
+                    if (project) {
+                      return (
+                        <span className={`inline-flex mt-1 text-[10px] text-gray-700 px-1.5 py-0.5 rounded-md font-semibold items-center gap-0.5 ${project.color}`}>
+                          <Folder className="w-2.5 h-2.5" />
+                          {project.title}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {todo.time && (
@@ -307,6 +319,18 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                     </span>
                     {todo.title}
                   </p>
+                  {todo.projectId && (() => {
+                    const project = projects.find(p => p.id === todo.projectId);
+                    if (project) {
+                      return (
+                        <span className={`inline-flex mt-1 text-[10px] text-gray-700 px-1.5 py-0.5 rounded-md font-semibold items-center gap-0.5 opacity-70 ${project.color}`}>
+                          <Folder className="w-2.5 h-2.5" />
+                          {project.title}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {todo.time && (
