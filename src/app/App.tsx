@@ -9,7 +9,7 @@ import { DataProvider } from "./context/DataContext";
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<'home' | 'todos' | 'goals-routines' | 'calendar'>('home');
   const [shouldOpenAddModal, setShouldOpenAddModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(2026, 2, 9)); // March 9, 2026
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const handleNavigate = (screen: 'home' | 'todos' | 'goals-routines' | 'calendar', options?: { openAddModal?: boolean; date?: Date }) => {
     setCurrentScreen(screen);

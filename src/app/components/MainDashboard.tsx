@@ -6,6 +6,7 @@ import {
   getRoutineDisplayCount,
   isRoutineCompleted,
 } from "../utils/routineProgress";
+import { formatDateString, isSameDay, matchesDueDate } from "../utils/dateUtils";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
 
@@ -19,46 +20,21 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
   const [activeTab, setActiveTab] = useState<"todo" | "routine">("todo");
-  const today = new Date(2026, 2, 9); // March 9, 2026
+  const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekOffset, setWeekOffset] = useState(0); // 주 단위 오프셋
 
-  // 날짜를 YYYY-MM-DD 형식 문자열로 변환
-  const formatDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   const selectedDateString = formatDateString(selectedDate);
-  const todayString = formatDateString(today);
 
   // 선택한 날짜의 할일 (완료/미완료 모두 포함)
-  const selectedDateTodos = todos.filter((todo) => {
-    // "오늘" 문자열 처리
-    if (todo.dueDate === "오늘" && selectedDateString === todayString) {
-      return true;
-    }
-    // "내일" 문자열 처리
-    if (todo.dueDate === "내일") {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return selectedDateString === formatDateString(tomorrow);
-    }
-    // YYYY-MM-DD 형식 날짜
-    if (typeof todo.dueDate === 'string' && todo.dueDate.includes('-')) {
-      return todo.dueDate === selectedDateString;
-    }
-    return false;
-  });
+  const selectedDateTodos = todos.filter((todo) => matchesDueDate(todo.dueDate, selectedDate, today));
 
   // 미완료 할일과 완료 할일 분리
   const incompleteTodos = selectedDateTodos.filter(t => !t.completed);
   const completedTodos = selectedDateTodos.filter(t => t.completed);
 
   // 선택한 날짜가 오늘인지 확인
-  const isSelectedToday = selectedDate.toDateString() === today.toDateString();
+  const isSelectedToday = isSameDay(selectedDate, today);
   
   // 카테고리별 색상 매핑 (배경 포함)
   const categoryStyles: { [key: string]: { bg: string; text: string } } = {
@@ -77,8 +53,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   // 진행률 계산 (할일 + 루틴 통합)
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
-  const totalRoutines = routines.length;
-  const completedRoutinesCount = routines.filter(isRoutineCompleted).length;
+  const totalRoutines = isSelectedToday ? routines.length : 0;
+  const completedRoutinesCount = isSelectedToday ? routines.filter(isRoutineCompleted).length : 0;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -167,8 +143,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
       <div className="px-3 pb-3">
         <div className="flex gap-1 justify-between">
           {weekDates.map((date, index) => {
-            const isToday = date.toDateString() === today.toDateString();
-            const isSelected = date.toDateString() === selectedDate.toDateString();
+            const isToday = isSameDay(date, today);
+            const isSelected = isSameDay(date, selectedDate);
             const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
             const dayOfWeek = date.getDay();
             
