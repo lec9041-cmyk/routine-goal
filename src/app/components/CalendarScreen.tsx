@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Plus, Circle, CheckCircle2, Calendar as CalendarIcon, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Circle, CheckCircle2, Calendar as CalendarIcon, MoreHorizontal, X } from "lucide-react";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
 
