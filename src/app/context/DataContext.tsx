@@ -131,6 +131,18 @@ const initialRoutines: Routine[] = [];
 
 const initialProjects: Project[] = [];
 
+const getRoutineTrackedCount = (routine: Routine) => {
+  if (routine.frequency === 'weekly') {
+    return routine.weeklyCount ?? 0;
+  }
+
+  if (routine.frequency === 'monthly') {
+    return routine.monthlyCount ?? 0;
+  }
+
+  return routine.currentCount;
+};
+
 // Provider component
 export function DataProvider({ children }: { children: ReactNode }) {
   const [todos, setTodos] = useState<Todo[]>(() => {
@@ -227,15 +239,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setRoutines(prev => [...prev, routine]);
     
     if (routine.linkedGoalId) {
+      const trackedCount = getRoutineTrackedCount(routine);
       setGoals(prev => prev.map(g => {
         if (g.id === routine.linkedGoalId) {
           const linkedRoutine: LinkedRoutine = {
             id: routine.id,
             title: routine.title,
             icon: routine.icon,
-            currentProgress: (routine.currentCount / routine.targetCount) * 100,
+            currentProgress: (trackedCount / routine.targetCount) * 100,
             targetCount: routine.targetCount,
-            currentCount: routine.currentCount,
+            currentCount: trackedCount,
             frequency: routine.frequency,
             trackingType: routine.trackingType,
             selectedDays: routine.selectedDays,
@@ -251,19 +264,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateRoutine = (id: string, updates: Partial<Routine>) => {
-    setRoutines(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+    let updatedRoutine: Routine | null = null;
+    setRoutines(prev => prev.map(r => {
+      if (r.id === id) {
+        updatedRoutine = { ...r, ...updates };
+        return updatedRoutine;
+      }
+      return r;
+    }));
     
     setGoals(prev => prev.map(g => ({
       ...g,
       linkedRoutines: g.linkedRoutines.map(lr => {
         if (lr.id === id) {
+          const targetCount = updates.targetCount ?? lr.targetCount;
+          const trackedCount = updatedRoutine ? getRoutineTrackedCount(updatedRoutine) : (updates.currentCount ?? lr.currentCount);
           return {
             ...lr,
             title: updates.title ?? lr.title,
             icon: updates.icon ?? lr.icon,
-            currentCount: updates.currentCount ?? lr.currentCount,
-            targetCount: updates.targetCount ?? lr.targetCount,
-            currentProgress: ((updates.currentCount ?? lr.currentCount) / (updates.targetCount ?? lr.targetCount)) * 100,
+            currentCount: trackedCount,
+            targetCount,
+            currentProgress: (trackedCount / targetCount) * 100,
             selectedDays: updates.selectedDays ?? lr.selectedDays,
           };
         }
@@ -282,10 +304,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const incrementRoutine = (id: string) => {
+    let updatedRoutine: Routine | null = null;
     setRoutines(prev => prev.map(r => {
       if (r.id === id) {
-        const newCount = r.currentCount + 1;
-        return { ...r, currentCount: newCount };
+        if (r.frequency === 'weekly') {
+          const nextCount = Math.min((r.weeklyCount ?? 0) + 1, r.targetCount);
+          updatedRoutine = { ...r, weeklyCount: nextCount };
+          return updatedRoutine;
+        }
+
+        if (r.frequency === 'monthly') {
+          const nextCount = Math.min((r.monthlyCount ?? 0) + 1, r.targetCount);
+          updatedRoutine = { ...r, monthlyCount: nextCount };
+          return updatedRoutine;
+        }
+
+        const nextCount = Math.min(r.currentCount + 1, r.targetCount);
+        updatedRoutine = { ...r, currentCount: nextCount };
+        return updatedRoutine;
       }
       return r;
     }));
@@ -294,11 +330,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...g,
       linkedRoutines: g.linkedRoutines.map(lr => {
         if (lr.id === id) {
-          const newCount = lr.currentCount + 1;
+          const nextCount = updatedRoutine
+            ? getRoutineTrackedCount(updatedRoutine)
+            : Math.min(lr.currentCount + 1, lr.targetCount);
           return {
             ...lr,
-            currentCount: newCount,
-            currentProgress: (newCount / lr.targetCount) * 100,
+            currentCount: nextCount,
+            currentProgress: (nextCount / lr.targetCount) * 100,
           };
         }
         return lr;

@@ -17,7 +17,10 @@ export const isRoutineCompleted = (routine: Routine) => {
 };
 
 export const getRoutineCompletionTogglePatch = (routine: Routine): Partial<Routine> => {
-  const nextCount = isRoutineCompleted(routine) ? 0 : routine.targetCount;
+  const displayCount = getRoutineDisplayCount(routine);
+  const nextCount = isRoutineCompleted(routine)
+    ? Math.max(displayCount - 1, 0)
+    : Math.min(displayCount + 1, routine.targetCount);
 
   if (routine.frequency === "daily") {
     return { currentCount: nextCount };

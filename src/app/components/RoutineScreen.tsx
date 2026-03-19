@@ -15,7 +15,6 @@ import {
 import { useData } from "../context/DataContext";
 import type { Routine } from "../context/DataContext";
 import {
-  getRoutineCompletionTogglePatch,
   getRoutineDisplayCount,
   isRoutineCompleted,
 } from "../utils/routineProgress";
@@ -117,13 +116,38 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const decrementCount = (id: string) => {
     const routine = routines.find(r => r.id === id);
     if (!routine) return;
-    
+
+    if (routine.frequency === "weekly") {
+      updateRoutine(id, { weeklyCount: Math.max((routine.weeklyCount ?? 0) - 1, 0) });
+      return;
+    }
+
+    if (routine.frequency === "monthly") {
+      updateRoutine(id, { monthlyCount: Math.max((routine.monthlyCount ?? 0) - 1, 0) });
+      return;
+    }
+
     const newCount = Math.max(routine.currentCount - 1, 0);
     updateRoutine(id, { currentCount: newCount });
   };
 
   const toggleRoutineComplete = (routine: Routine) => {
-    updateRoutine(routine.id, getRoutineCompletionTogglePatch(routine));
+    const displayCount = getRoutineDisplayCount(routine);
+    const nextCount = isRoutineCompleted(routine)
+      ? Math.max(displayCount - 1, 0)
+      : Math.min(displayCount + 1, routine.targetCount);
+
+    if (routine.frequency === "weekly") {
+      updateRoutine(routine.id, { weeklyCount: nextCount });
+      return;
+    }
+
+    if (routine.frequency === "monthly") {
+      updateRoutine(routine.id, { monthlyCount: nextCount });
+      return;
+    }
+
+    updateRoutine(routine.id, { currentCount: nextCount });
   };
 
   const filteredRoutines = routines.filter((routine) => {
