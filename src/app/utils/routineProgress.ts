@@ -1,34 +1,50 @@
 import type { Routine } from "../context/DataContext";
+import { toDateKey } from "./dateUtils";
 
-export const getRoutineDisplayCount = (routine: Routine) => {
+const getWeekStartKey = (referenceDate: Date) => {
+  const date = new Date(referenceDate);
+  const day = date.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + mondayOffset);
+  return toDateKey(date);
+};
+
+const getWeekEndKey = (referenceDate: Date) => {
+  const date = new Date(referenceDate);
+  const day = date.getDay();
+  const sundayOffset = day === 0 ? 0 : 7 - day;
+  date.setDate(date.getDate() + sundayOffset);
+  return toDateKey(date);
+};
+
+const getMonthPrefix = (referenceDate: Date) => {
+  const year = referenceDate.getFullYear();
+  const month = String(referenceDate.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}-`;
+};
+
+export const getRoutineCountForPeriod = (routine: Routine, referenceDate: Date) => {
+  const completedDates = routine.completedDates ?? [];
+  const referenceKey = toDateKey(referenceDate);
+
   if (routine.frequency === "daily") {
-    return routine.currentCount;
+    return completedDates.filter((dateKey) => dateKey === referenceKey).length;
   }
 
   if (routine.frequency === "weekly") {
-    return routine.weeklyCount || 0;
+    const weekStart = getWeekStartKey(referenceDate);
+    const weekEnd = getWeekEndKey(referenceDate);
+    return completedDates.filter((dateKey) => dateKey >= weekStart && dateKey <= weekEnd).length;
   }
 
-  return routine.monthlyCount || 0;
+  const monthPrefix = getMonthPrefix(referenceDate);
+  return completedDates.filter((dateKey) => dateKey.startsWith(monthPrefix)).length;
 };
 
-export const isRoutineCompleted = (routine: Routine) => {
-  return getRoutineDisplayCount(routine) >= routine.targetCount;
+export const getRoutineDisplayCount = (routine: Routine, referenceDate: Date = new Date()) => {
+  return getRoutineCountForPeriod(routine, referenceDate);
 };
 
-export const getRoutineCompletionTogglePatch = (routine: Routine): Partial<Routine> => {
-  const displayCount = getRoutineDisplayCount(routine);
-  const nextCount = isRoutineCompleted(routine)
-    ? Math.max(displayCount - 1, 0)
-    : Math.min(displayCount + 1, routine.targetCount);
-
-  if (routine.frequency === "daily") {
-    return { currentCount: nextCount };
-  }
-
-  if (routine.frequency === "weekly") {
-    return { weeklyCount: nextCount };
-  }
-
-  return { monthlyCount: nextCount };
+export const isRoutineCompleted = (routine: Routine, referenceDate: Date = new Date()) => {
+  return getRoutineCountForPeriod(routine, referenceDate) >= routine.targetCount;
 };
