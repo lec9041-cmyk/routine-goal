@@ -31,9 +31,10 @@ interface RoutineScreenProps {
 
 export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: RoutineScreenProps) {
   const { routines, addRoutine, deleteRoutine, toggleRoutineForDate } = useData();
+  const allowPastDateEdit = false;
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRoutineMenu, setShowRoutineMenu] = useState<string | null>(null);
-  const allowPastDateEditing = false;
+  const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
   
   // shouldOpenAddModal이 true면 모달 열기
   useEffect(() => {
@@ -60,9 +61,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const [viewMode, setViewMode] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const today = new Date();
   const todayKey = toDateKey(today);
-  const [selectedDateKey, setSelectedDateKey] = useState(todayKey);
-  const selectedDate = new Date(`${selectedDateKey}T00:00:00`);
-  const isSelectedDateToday = selectedDateKey === todayKey;
+  const referenceDate = new Date(`${selectedDateKey}T00:00:00`);
+  const isPastDate = selectedDateKey < todayKey;
+  const isReadOnlyPastDate = !allowPastDateEdit && isPastDate;
 
   const iconOptions = ["⭐", "💧", "💪", "🧘", "📚", "📖", "🏃", "🎨", "🎵", "🍎", "☕", "🌱", "✍️", "🧠", "❤️"];
   const categoryOptions = ["건강", "학습", "자기계발", "취미", "업무", "관계"];
@@ -117,8 +118,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   };
 
   const toggleRoutineComplete = (routine: Routine) => {
-    if (!allowPastDateEditing && !isSelectedDateToday) return;
-    toggleRoutineForDate(routine.id, selectedDateKey);
+    if (isReadOnlyPastDate) return;
+    toggleRoutineForDate(routine.id, allowPastDateEdit ? selectedDateKey : todayKey);
   };
 
   const filteredRoutines = routines.filter((routine) => {
@@ -129,7 +130,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const getTotalProgress = (routines: Routine[]) => {
     if (routines.length === 0) return 0;
     const totalCompleted = routines.reduce((sum, r) => {
-      return sum + (isRoutineCompleted(r, selectedDate) ? 1 : 0);
+      return sum + (isRoutineCompleted(r, referenceDate) ? 1 : 0);
     }, 0);
     return Math.round((totalCompleted / routines.length) * 100);
   };
@@ -166,11 +167,13 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
         </h3>
         <div className="space-y-2.5 px-5">
           {routines.map((routine) => {
-            const isCompleted = isRoutineCompleted(routine, selectedDate);
-            const displayCount = getRoutineDisplayCount(routine, selectedDate);
-            const periodCount = getRoutineCountForPeriod(routine, selectedDate);
+            const isCompleted = isRoutineCompleted(routine, referenceDate);
+            const displayCount = getRoutineDisplayCount(routine, referenceDate);
+            const periodCount = getRoutineCountForPeriod(routine, referenceDate);
             const progressPercentage = (periodCount / routine.targetCount) * 100;
-            const canToggle = allowPastDateEditing || isSelectedDateToday;
+            const statusText = isCompleted
+              ? "체크됨, 다시 누르면 취소"
+              : "미체크, 누르면 완료 처리";
 
             return (
               <div
@@ -180,9 +183,12 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => toggleRoutineComplete(routine)}
-                    className={`flex-shrink-0 transition-transform ${canToggle ? "hover:scale-105" : "opacity-40 cursor-not-allowed"}`}
-                    aria-label={`${routine.title} 완료 체크`}
-                    disabled={!canToggle}
+                    className={`flex-shrink-0 transition-transform ${
+                      isReadOnlyPastDate ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
+                    }`}
+                    aria-label={`${routine.title} ${statusText}`}
+                    title={isReadOnlyPastDate ? "과거 날짜는 읽기 전용입니다." : "하루 1회 체크 · 다시 누르면 취소"}
+                    disabled={isReadOnlyPastDate}
                   >
                     {isCompleted ? (
                       <CheckCircle2 className="w-5 h-5 text-blue-500" />
@@ -208,6 +214,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium">
                         {routine.category}
+                      </span>
+                      <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium" title="하루 1회 체크 · 다시 누르면 취소">
+                        하루 1회 체크 · 다시 누르면 취소
                       </span>
                     </div>
 
@@ -314,28 +323,29 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
       {/* Today's Progress */}
       <div className="px-5 py-5">
-        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm px-4 py-3 mb-4">
+        <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3 mb-4">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[12px] font-semibold text-gray-700">체크 정책</p>
-              <p className="text-[11px] text-gray-500">하루 1회 체크, 다시 누르면 취소</p>
+            <div className="flex items-center gap-2 text-gray-700">
+              <CalendarIcon className="w-4 h-4" />
+              <span className="text-[12px] font-medium">기준 날짜</span>
             </div>
-            {allowPastDateEditing ? (
-              <label className="flex items-center gap-2 text-[11px] text-gray-600">
-                <CalendarIcon className="w-3.5 h-3.5" />
-                <input
-                  type="date"
-                  value={selectedDateKey}
-                  onChange={(e) => setSelectedDateKey(e.target.value)}
-                  className="px-2 py-1 rounded-md border border-gray-200 bg-white text-[11px] text-gray-700"
-                />
-              </label>
-            ) : (
-              <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md">
-                오늘만 수정 가능
-              </span>
-            )}
+            <input
+              type="date"
+              value={selectedDateKey}
+              onChange={(e) => setSelectedDateKey(e.target.value || todayKey)}
+              className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-[12px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+            />
           </div>
+          {isReadOnlyPastDate && (
+            <p className="text-[11px] text-amber-600 mt-2">
+              과거 날짜는 읽기 전용입니다. 오늘({todayKey})만 체크를 수정할 수 있어요.
+            </p>
+          )}
+          {allowPastDateEdit && isPastDate && (
+            <p className="text-[11px] text-blue-600 mt-2">
+              과거 날짜 수정이 허용되어 선택 날짜에도 체크/취소를 적용합니다.
+            </p>
+          )}
         </div>
 
         <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-5 shadow-sm mb-5">
