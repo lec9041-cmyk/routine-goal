@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu } from "lucide-react";
 import { useData } from "../context/DataContext";
+import {
+  getRoutineCompletionTogglePatch,
+  getRoutineDisplayCount,
+  isRoutineCompleted,
+} from "../utils/routineProgress";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
 
@@ -9,10 +14,11 @@ interface MainDashboardProps {
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
-  const { todos, toggleTodo, addTodo } = useData();
+  const { todos, routines, toggleTodo, addTodo, updateRoutine } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
+  const [activeTab, setActiveTab] = useState<"todo" | "routine">("todo");
   const today = new Date(2026, 2, 9); // March 9, 2026
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekOffset, setWeekOffset] = useState(0); // 주 단위 오프셋
@@ -68,10 +74,13 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     return categoryStyles[category] || categoryStyles["기타"];
   };
 
-  // 진행률 계산 (미완료 할일 + 루틴)
-  const totalTodos = incompleteTodos.length;
-  const totalItems = totalTodos;
-  const completedItems = completedTodos.length;
+  // 진행률 계산 (할일 + 루틴 통합)
+  const totalTodos = selectedDateTodos.length;
+  const completedTodosCount = completedTodos.length;
+  const totalRoutines = routines.length;
+  const completedRoutinesCount = routines.filter(isRoutineCompleted).length;
+  const totalItems = totalTodos + totalRoutines;
+  const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   const handleQuickAdd = () => {
@@ -247,7 +256,32 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           </button>
         </div>
 
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setActiveTab("todo")}
+            className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
+              activeTab === "todo"
+                ? "bg-blue-500 text-white"
+                : "bg-white/70 text-gray-600"
+            }`}
+          >
+            할일
+          </button>
+          <button
+            onClick={() => setActiveTab("routine")}
+            className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
+              activeTab === "routine"
+                ? "bg-purple-500 text-white"
+                : "bg-white/70 text-gray-600"
+            }`}
+          >
+            루틴
+          </button>
+        </div>
+
         <div className="space-y-1.5">
+          {activeTab === "todo" && (
+            <>
           {/* 할일 소제목 */}
           {incompleteTodos.length > 0 && (
             <h3 className="text-[12px] font-bold text-gray-500 mt-2 mb-1 px-1">할일</h3>
@@ -330,6 +364,81 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 할일 추가하기
               </button>
             </div>
+          )}
+            </>
+          )}
+
+          {activeTab === "routine" && (
+            <>
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-[12px] font-bold text-gray-500">루틴</h3>
+                <button
+                  onClick={() => onNavigate("goals-routines")}
+                  className="text-[11px] text-purple-600 font-semibold"
+                >
+                  전체 보기
+                </button>
+              </div>
+
+              {routines.map((routine) => {
+                const isCompleted = isRoutineCompleted(routine);
+                const displayCount = getRoutineDisplayCount(routine);
+
+                return (
+                  <div
+                    key={routine.id}
+                    className={`bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm ${
+                      isCompleted ? "opacity-70" : ""
+                    }`}
+                  >
+                    <button
+                      onClick={() =>
+                        updateRoutine(routine.id, getRoutineCompletionTogglePatch(routine))
+                      }
+                      className="w-full flex items-center gap-2.5 p-2.5"
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-4.5 h-4.5 text-purple-500 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 text-left min-w-0">
+                        <p
+                          className={`text-[13.5px] leading-snug font-medium ${
+                            isCompleted ? "text-gray-400 line-through" : "text-gray-900"
+                          }`}
+                        >
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 text-[10px] font-bold mr-1">
+                            {routine.frequency === "daily"
+                              ? "daily"
+                              : routine.frequency === "weekly"
+                              ? "weekly"
+                              : "monthly"}
+                          </span>
+                          {routine.icon} {routine.title}
+                        </p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          {displayCount} / {routine.targetCount}
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+
+              {routines.length === 0 && (
+                <div className="bg-white/50 backdrop-blur-sm rounded-xl p-8 text-center">
+                  <Target className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-[13px]">루틴이 없습니다</p>
+                  <button
+                    onClick={() => onNavigate("goals-routines")}
+                    className="mt-3 text-purple-600 text-[13px] font-semibold"
+                  >
+                    루틴 추가하기
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
