@@ -14,6 +14,11 @@ import {
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Routine } from "../context/DataContext";
+import {
+  getRoutineCompletionTogglePatch,
+  getRoutineDisplayCount,
+  isRoutineCompleted,
+} from "../utils/routineProgress";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
 
@@ -118,29 +123,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   };
 
   const toggleRoutineComplete = (routine: Routine) => {
-    const isCompleted = routine.frequency === "daily"
-      ? routine.currentCount >= routine.targetCount
-      : routine.frequency === "weekly"
-      ? (routine.weeklyCount || 0) >= routine.targetCount
-      : (routine.monthlyCount || 0) >= routine.targetCount;
-
-    if (routine.frequency === "daily") {
-      updateRoutine(routine.id, {
-        currentCount: isCompleted ? 0 : routine.targetCount,
-      });
-      return;
-    }
-
-    if (routine.frequency === "weekly") {
-      updateRoutine(routine.id, {
-        weeklyCount: isCompleted ? 0 : routine.targetCount,
-      });
-      return;
-    }
-
-    updateRoutine(routine.id, {
-      monthlyCount: isCompleted ? 0 : routine.targetCount,
-    });
+    updateRoutine(routine.id, getRoutineCompletionTogglePatch(routine));
   };
 
   const filteredRoutines = routines.filter((routine) => {
@@ -151,13 +134,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const getTotalProgress = (routines: Routine[]) => {
     if (routines.length === 0) return 0;
     const totalCompleted = routines.reduce((sum, r) => {
-      if (r.frequency === "daily") {
-        return sum + (r.currentCount >= r.targetCount ? 1 : 0);
-      } else if (r.frequency === "weekly") {
-        return sum + ((r.weeklyCount || 0) >= r.targetCount ? 1 : 0);
-      } else {
-        return sum + ((r.monthlyCount || 0) >= r.targetCount ? 1 : 0);
-      }
+      return sum + (isRoutineCompleted(r) ? 1 : 0);
     }, 0);
     return Math.round((totalCompleted / routines.length) * 100);
   };
@@ -194,17 +171,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
         </h3>
         <div className="space-y-2.5 px-5">
           {routines.map((routine) => {
-            const isCompleted = routine.frequency === "daily"
-              ? routine.currentCount >= routine.targetCount
-              : routine.frequency === "weekly"
-              ? (routine.weeklyCount || 0) >= routine.targetCount
-              : (routine.monthlyCount || 0) >= routine.targetCount;
-
-            const displayCount = routine.frequency === "daily"
-              ? routine.currentCount
-              : routine.frequency === "weekly"
-              ? routine.weeklyCount || 0
-              : routine.monthlyCount || 0;
+            const isCompleted = isRoutineCompleted(routine);
+            const displayCount = getRoutineDisplayCount(routine);
 
             const progressPercentage = (displayCount / routine.targetCount) * 100;
 
