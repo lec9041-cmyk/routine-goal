@@ -231,9 +231,14 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-gray-600 font-bold">
-                        {displayCount}/{routine.targetCount}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] text-gray-600 font-bold">
+                          {displayCount}/{routine.targetCount}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          하루 1회 체크, 다시 누르면 취소
+                        </span>
+                      </div>
                       {/* Streak Info */}
                       <div className="flex items-center gap-1">
                         <Flame className="w-3.5 h-3.5 text-orange-400" />
@@ -348,9 +353,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             <div>
               <p className="text-purple-600 text-[12px] mb-1 font-medium">
                 {viewMode === "all" && "전체 루틴"}
-                {viewMode === "daily" && "오늘의 루틴"}
-                {viewMode === "weekly" && "이번 주 루틴"}
-                {viewMode === "monthly" && "이번 달 루틴"}
+                {viewMode === "daily" && (isSelectedDateToday ? "오늘의 루틴" : "선택한 날짜 루틴")}
+                {viewMode === "weekly" && (isSelectedDateToday ? "이번 주 루틴" : "선택한 날짜 기준 주간 루틴")}
+                {viewMode === "monthly" && (isSelectedDateToday ? "이번 달 루틴" : "선택한 날짜 기준 월간 루틴")}
               </p>
               <p className="text-purple-900 text-2xl font-bold">
                 {filteredRoutines.length}개
