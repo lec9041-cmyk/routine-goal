@@ -19,6 +19,10 @@ interface CalendarScreenProps {
 export function CalendarScreen({ onNavigate, selectedDate: propSelectedDate }: CalendarScreenProps) {
   const [currentDate, setCurrentDate] = useState(propSelectedDate || new Date(2026, 2, 9));
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [eventsByDate, setEventsByDate] = useState<Record<string, CalendarEvent[]>>({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventType, setEventType] = useState<CalendarEvent["type"]>("event");
 
   useEffect(() => {
     if (propSelectedDate) {
@@ -49,64 +53,18 @@ export function CalendarScreen({ onNavigate, selectedDate: propSelectedDate }: C
   const today = new Date(2026, 2, 9);
   const todayDate = today.getDate();
 
-  // 각 날짜별 이벤트 (예시 데이터)
-  const eventsData: { [key: number]: CalendarEvent[] } = {
-    1: [
-      { id: "1", title: "운라인 수업", type: "event", color: "bg-red-400" },
-      { id: "2", title: "수영 수업", type: "routine", color: "bg-yellow-400" },
-    ],
-    2: [
-      { id: "3", title: "할일 마감", type: "todo", color: "bg-blue-400" },
-      { id: "4", title: "명상", type: "routine", color: "bg-green-400" },
-    ],
-    3: [
-      { id: "5", title: "회의 개최", type: "event", color: "bg-purple-400" },
-    ],
-    4: [
-      { id: "6", title: "쇼핑하기", type: "todo", color: "bg-pink-400" },
-      { id: "7", title: "피트니스", type: "routine", color: "bg-orange-400" },
-    ],
-    5: [
-      { id: "8", title: "영화 시청", type: "event", color: "bg-teal-400" },
-      { id: "9", title: "독서", type: "routine", color: "bg-indigo-400" },
-    ],
-    6: [
-      { id: "10", title: "온라인 과제", type: "todo", color: "bg-blue-400" },
-    ],
-    7: [
-      { id: "11", title: "명상", type: "routine", color: "bg-green-400" },
-      { id: "12", title: "경기", type: "event", color: "bg-red-400" },
-    ],
-    8: [
-      { id: "13", title: "스터디 모임", type: "event", color: "bg-purple-400" },
-      { id: "14", title: "수영", type: "routine", color: "bg-blue-400" },
-    ],
-    9: [
-      { id: "15", title: "프로젝트 기획서", type: "todo", color: "bg-blue-500" },
-      { id: "16", title: "디자인 리뷰", type: "todo", color: "bg-purple-500" },
-      { id: "17", title: "운동하기", type: "routine", color: "bg-orange-500" },
-      { id: "18", title: "독서", type: "routine", color: "bg-green-500" },
-    ],
-    10: [
-      { id: "19", title: "바이올린 연습", type: "routine", color: "bg-pink-400" },
-      { id: "20", title: "마라톤 대회", type: "event", color: "bg-red-400" },
-    ],
-    11: [
-      { id: "21", title: "수업", type: "event", color: "bg-yellow-400" },
-    ],
-    15: [
-      { id: "22", title: "목표 점검", type: "goal", color: "bg-green-500" },
-      { id: "23", title: "월간 보고서", type: "todo", color: "bg-blue-500" },
-    ],
-    17: [
-      { id: "24", title: "클로경", type: "event", color: "bg-purple-400" },
-    ],
-    24: [
-      { id: "25", title: "골프 레슨", type: "routine", color: "bg-green-400" },
-    ],
-    31: [
-      { id: "26", title: "학기 내일", type: "event", color: "bg-red-400" },
-    ],
+  const colorByType: Record<CalendarEvent["type"], string> = {
+    todo: "bg-blue-500",
+    routine: "bg-orange-500",
+    goal: "bg-green-500",
+    event: "bg-purple-500",
+  };
+
+  const getDateKey = (day: number) => {
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const date = String(day).padStart(2, "0");
+    return `${year}-${month}-${date}`;
   };
 
   const previousMonth = () => {
@@ -120,12 +78,34 @@ export function CalendarScreen({ onNavigate, selectedDate: propSelectedDate }: C
   };
 
   const getEventChips = (day: number) => {
-    const events = eventsData[day] || [];
+    const events = eventsByDate[getDateKey(day)] || [];
     return events;
   };
 
   // 선택된 날짜의 이벤트
-  const selectedDayEvents = selectedDate ? eventsData[selectedDate] || [] : [];
+  const selectedDayEvents = selectedDate ? eventsByDate[getDateKey(selectedDate)] || [] : [];
+
+  const handleAddEvent = () => {
+    if (!eventTitle.trim()) return;
+
+    const targetDay = selectedDate ?? todayDate;
+    const dateKey = getDateKey(targetDay);
+    const newEvent: CalendarEvent = {
+      id: `${Date.now()}`,
+      title: eventTitle.trim(),
+      type: eventType,
+      color: colorByType[eventType],
+    };
+
+    setEventsByDate((prev) => ({
+      ...prev,
+      [dateKey]: [...(prev[dateKey] || []), newEvent],
+    }));
+    setSelectedDate(targetDay);
+    setEventTitle("");
+    setEventType("event");
+    setShowAddModal(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-24">
@@ -273,9 +253,55 @@ export function CalendarScreen({ onNavigate, selectedDate: propSelectedDate }: C
       </div>
 
       {/* Floating Add Button */}
-      <button className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105">
+      <button
+        onClick={() => setShowAddModal(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105"
+      >
         <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
       </button>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-5">
+            <h3 className="text-[17px] font-bold text-gray-900 mb-3">일정 추가</h3>
+            <p className="text-[12px] text-gray-500 mb-3">
+              {currentDate.getMonth() + 1}월 {selectedDate ?? todayDate}일
+            </p>
+            <input
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddEvent()}
+              placeholder="이벤트 내용을 입력하세요"
+              autoFocus
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3"
+            />
+            <select
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value as CalendarEvent["type"])}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] focus:outline-none focus:ring-2 focus:ring-blue-300 mb-4 bg-white"
+            >
+              <option value="event">일정</option>
+              <option value="todo">할일</option>
+              <option value="routine">루틴</option>
+              <option value="goal">목표</option>
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAddEvent}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-semibold"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

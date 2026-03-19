@@ -117,6 +117,32 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     updateRoutine(id, { currentCount: newCount });
   };
 
+  const toggleRoutineComplete = (routine: Routine) => {
+    const isCompleted = routine.frequency === "daily"
+      ? routine.currentCount >= routine.targetCount
+      : routine.frequency === "weekly"
+      ? (routine.weeklyCount || 0) >= routine.targetCount
+      : (routine.monthlyCount || 0) >= routine.targetCount;
+
+    if (routine.frequency === "daily") {
+      updateRoutine(routine.id, {
+        currentCount: isCompleted ? 0 : routine.targetCount,
+      });
+      return;
+    }
+
+    if (routine.frequency === "weekly") {
+      updateRoutine(routine.id, {
+        weeklyCount: isCompleted ? 0 : routine.targetCount,
+      });
+      return;
+    }
+
+    updateRoutine(routine.id, {
+      monthlyCount: isCompleted ? 0 : routine.targetCount,
+    });
+  };
+
   const filteredRoutines = routines.filter((routine) => {
     if (viewMode === "all") return true;
     return routine.frequency === viewMode;
@@ -188,13 +214,17 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0">
+                  <button
+                    onClick={() => toggleRoutineComplete(routine)}
+                    className="flex-shrink-0 hover:scale-105 transition-transform"
+                    aria-label={`${routine.title} 완료 체크`}
+                  >
                     {isCompleted ? (
                       <CheckCircle2 className="w-5 h-5 text-blue-500" />
                     ) : (
                       <Circle className="w-5 h-5 text-gray-300" />
                     )}
-                  </div>
+                  </button>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
