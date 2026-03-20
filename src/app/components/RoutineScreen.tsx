@@ -35,9 +35,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const { routines, addRoutine, deleteRoutine, toggleRoutineForDate } = useData();
   const allowPastDateEdit = false;
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showInlineQuickAdd, setShowInlineQuickAdd] = useState(false);
   const [quickRoutineTitle, setQuickRoutineTitle] = useState("");
   const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [skipQuickAddOnBlur, setSkipQuickAddOnBlur] = useState(false);
   const [showRoutineMenu, setShowRoutineMenu] = useState<string | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
   
@@ -48,13 +48,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     }
   }, [shouldOpenAddModal]);
 
-  useEffect(() => {
-    if (!showInlineQuickAdd) {
-      setQuickRoutineTitle("");
-      setIsQuickAdding(false);
-    }
-  }, [showInlineQuickAdd]);
-  
   const [newRoutine, setNewRoutine] = useState({
     title: "",
     icon: "⭐",
@@ -140,7 +133,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     if (isQuickAdding) return;
     const title = quickRoutineTitle.trim();
     if (!title) {
-      setShowInlineQuickAdd(false);
+      setQuickRoutineTitle("");
       return;
     }
 
@@ -158,10 +151,21 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
         color: "from-blue-100 to-blue-200",
         completedDates: [],
       });
-      setShowInlineQuickAdd(false);
+      setQuickRoutineTitle("");
     } finally {
       setIsQuickAdding(false);
     }
+  };
+
+  const openDetailRoutineModal = () => {
+    setNewRoutine((prev) => ({
+      ...prev,
+      title: quickRoutineTitle.trim(),
+      category: prev.category || "건강",
+      frequency: prev.frequency || "daily",
+      targetCount: prev.targetCount || 1,
+    }));
+    setShowAddModal(true);
   };
 
   const requestNotificationPermission = async () => {
@@ -453,46 +457,47 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
           </p>
         </div>
 
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-2 mb-5">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={quickRoutineTitle}
+              onChange={(e) => setQuickRoutineTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleQuickAddRoutine();
+                }
+              }}
+              onBlur={() => {
+                if (skipQuickAddOnBlur) {
+                  setSkipQuickAddOnBlur(false);
+                  return;
+                }
+                handleQuickAddRoutine();
+              }}
+              placeholder="+ 루틴 입력..."
+              className="flex-1 h-10 px-3 rounded-lg bg-white border border-gray-200 focus:border-purple-500 focus:outline-none text-[14px]"
+            />
+            <button
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setSkipQuickAddOnBlur(true);
+              }}
+              onClick={openDetailRoutineModal}
+              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
+              title="상세 설정"
+              aria-label="상세 설정"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
         {/* Routines by Frequency */}
         <FrequencySection title="주간 루틴" routines={groupedByFrequency.weekly} icon={frequencyIcons.weekly} />
         <FrequencySection title="월간 루틴" routines={groupedByFrequency.monthly} icon={frequencyIcons.monthly} />
       </div>
-
-      {/* Floating Add Button */}
-      <button 
-        onClick={() => setShowInlineQuickAdd(true)}
-        className="fixed bottom-[calc(var(--app-bottom-space)+12px)] right-4 sm:right-6 w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105"
-      >
-        <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
-      </button>
-
-      {showInlineQuickAdd && (
-        <div className="fixed bottom-[calc(var(--app-bottom-space)+92px)] left-4 right-4 z-40 sm:left-auto sm:right-6 sm:w-[420px]">
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/80 shadow-sm p-3">
-            <p className="text-[11px] text-gray-600 mb-2">빠른 루틴 입력 (기본: 일일/건강/목표 1회)</p>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={quickRoutineTitle}
-                onChange={(e) => setQuickRoutineTitle(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleQuickAddRoutine()}
-                onBlur={handleQuickAddRoutine}
-                placeholder="루틴을 입력하세요..."
-                autoFocus
-                className="flex-1 h-10 px-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:outline-none text-[14px]"
-              />
-              <button
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setShowAddModal(true)}
-                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
-                title="상세 설정"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add Routine Modal */}
       {showAddModal && (
