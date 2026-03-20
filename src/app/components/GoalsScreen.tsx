@@ -95,6 +95,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     { name: "주황", value: "from-orange-100 to-orange-200" },
   ];
   const goalModalInputClass = "w-full h-11 px-4 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent";
+  const goalModalDateInputClass = "w-full max-w-[13rem] h-11 px-3 rounded-xl bg-gray-50 border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent";
   const goalModalChipClass = "min-h-10 px-4 rounded-xl text-[13px] font-medium transition-all";
 
   const iconOptions = ["🎯", "💪", "📚", "💧", "🧘", "🏃", "📖", "✍️", "🎨", "💻"];
@@ -360,7 +361,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   };
 
   return (
-    <div className="min-h-screen bg-transparent pb-24">
+    <div className="min-h-full bg-transparent">
       {/* Header */}
       {!hideHeader && (
         <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
@@ -649,7 +650,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     type="date"
                     value={newGoal.endDate}
                     onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })}
-                    className={goalModalInputClass}
+                    className={goalModalDateInputClass}
                   />
                 </div>
 

@@ -108,7 +108,7 @@ export function CalendarScreen({ onNavigate, selectedDate: propSelectedDate }: C
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-24">
+    <div className="min-h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <div className="px-5 pt-8 pb-4">
         <div className="flex items-center justify-between mb-6">

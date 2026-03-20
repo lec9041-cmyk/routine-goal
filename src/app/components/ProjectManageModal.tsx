@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Plus, Folder, Edit2, Trash2, Calendar } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Project } from "../context/DataContext";
+import { ModalPortal } from "./common/ModalPortal";
 
 interface ProjectManageModalProps {
   onClose: () => void;
@@ -17,6 +18,7 @@ const projectColors = [
   { name: "분홍", class: "bg-gradient-to-br from-pink-100 to-pink-200" },
   { name: "회색", class: "bg-gradient-to-br from-gray-100 to-gray-200" },
 ];
+const compactDateInputClass = "w-full max-w-[12.5rem] px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]";
 
 export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
   const { projects, addProject, updateProject, deleteProject, todos } = useData();
@@ -100,8 +102,9 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
   };
 
   return (
-    <div className="modal-backdrop bg-black/50 flex items-end justify-center">
-      <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] flex flex-col overflow-hidden">
+    <ModalPortal>
+    <div className="modal-backdrop z-[1200] bg-black/50 flex items-end justify-center">
+      <div className="modal-sheet z-[1201] bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] flex flex-col overflow-hidden">
         <div className="shrink-0 px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-[20px] font-bold text-gray-900 flex items-center gap-2">
             <Folder className="w-5 h-5 text-blue-600" />
@@ -161,7 +164,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block text-[12px] font-semibold text-gray-700 mb-1">
                   시작일
@@ -170,7 +173,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={newProject.startDate}
                   onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
               <div>
@@ -181,7 +184,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={newProject.endDate}
                   onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
             </div>
@@ -235,7 +238,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block text-[12px] font-semibold text-gray-700 mb-1">
                   시작일
@@ -244,7 +247,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={editingProject.startDate || ""}
                   onChange={(e) => setEditingProject({ ...editingProject, startDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
               <div>
@@ -255,7 +258,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={editingProject.endDate || ""}
                   onChange={(e) => setEditingProject({ ...editingProject, endDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
             </div>
@@ -383,5 +386,6 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
         )}
       </div>
     </div>
+    </ModalPortal>
   );
 }

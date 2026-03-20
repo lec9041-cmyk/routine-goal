@@ -15,7 +15,7 @@ export function GoalRoutineScreen({ onNavigate, shouldOpenAddModal }: GoalRoutin
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Tab Switch Header */}
       <div className="sticky top-0 z-20 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <div className="px-5 pt-12 pb-4">
