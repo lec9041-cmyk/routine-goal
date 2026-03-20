@@ -52,6 +52,22 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     };
   });
 
+  const selectedDayOfWeek = selectedDate.getDay();
+  const actionableRoutines = selectedDateRoutines.filter((routine) => {
+    if (routine.frequency === "daily") {
+      return true;
+    }
+
+    return routine.frequency === "weekly"
+      && routine.scheduleType === "specific"
+      && Boolean(routine.specificDays?.includes(selectedDayOfWeek));
+  });
+
+  const deferredRoutines = selectedDateRoutines.filter((routine) =>
+    (routine.frequency === "weekly" || routine.frequency === "monthly")
+    && routine.scheduleType !== "specific"
+  );
+
   // 선택한 날짜가 오늘인지 확인
   const isSelectedToday = isSameDay(selectedDate, today);
   
@@ -72,14 +88,21 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   // 진행률 계산 (선택 날짜 기준 할일 + 루틴 통합)
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
-  const totalRoutines = selectedDateRoutines.length;
-  const completedRoutinesCount = selectedDateRoutines.filter((routine) => routine.isCompleted).length;
+  const totalRoutines = actionableRoutines.length;
+  const completedRoutinesCount = actionableRoutines.filter((routine) => routine.isCompleted).length;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   const progressTitle = isSelectedToday
     ? "오늘 진행률"
     : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 진행률`;
+
+  const weeklyDeferred = deferredRoutines.filter((routine) => routine.frequency === "weekly");
+  const monthlyDeferred = deferredRoutines.filter((routine) => routine.frequency === "monthly");
+  const weeklyDeferredTotalTarget = weeklyDeferred.reduce((sum, routine) => sum + routine.targetCount, 0);
+  const weeklyDeferredCurrent = weeklyDeferred.reduce((sum, routine) => sum + routine.completedCount, 0);
+  const monthlyDeferredTotalTarget = monthlyDeferred.reduce((sum, routine) => sum + routine.targetCount, 0);
+  const monthlyDeferredCurrent = monthlyDeferred.reduce((sum, routine) => sum + routine.completedCount, 0);
 
   const handleQuickAdd = async () => {
     if (isQuickAdding) return;
@@ -413,16 +436,16 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           {(activeFilter === "all" || activeFilter === "routine") && (
             <>
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[12px] font-bold text-gray-600">루틴</h3>
+                <h3 className="text-[12px] font-bold text-gray-600">오늘 루틴</h3>
                 <button
                   onClick={() => onNavigate("goals-routines")}
                   className="text-[11px] text-purple-700 font-semibold"
                 >
-                  전체 보기
+                  주간/월간 관리
                 </button>
               </div>
 
-              {selectedDateRoutines.map((routine) => {
+              {actionableRoutines.map((routine) => {
                 const displayCount = routine.completedCount;
                 const isCompleted = routine.isCompleted;
                 const linkedGoal = routine.linkedGoalId
@@ -481,10 +504,10 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 );
               })}
 
-              {selectedDateRoutines.length === 0 && activeFilter === "routine" && (
+              {actionableRoutines.length === 0 && activeFilter === "routine" && (
                 <div className={`${itemCardClass} p-8 text-center`}>
                   <Target className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-600 text-[13px]">루틴 없음</p>
+                  <p className="text-gray-600 text-[13px]">오늘 할 루틴 없음</p>
                   <button
                     onClick={() => onNavigate("goals-routines")}
                     className="mt-3 text-purple-700 text-[13px] font-semibold"
@@ -496,7 +519,26 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             </>
           )}
 
-          {activeFilter === "all" && totalItems === 0 && (
+          {activeFilter === "all" && (weeklyDeferred.length > 0 || monthlyDeferred.length > 0) && (
+            <div className="pt-1 space-y-1.5">
+              {weeklyDeferred.length > 0 && (
+                <div className={`${itemCardClass} px-3 py-2.5`}>
+                  <p className="text-[12px] text-gray-700">
+                    이번주 루틴 <span className="font-bold text-purple-700">{weeklyDeferredCurrent}/{weeklyDeferredTotalTarget}</span> 진행 중
+                  </p>
+                </div>
+              )}
+              {monthlyDeferred.length > 0 && (
+                <div className={`${itemCardClass} px-3 py-2.5`}>
+                  <p className="text-[12px] text-gray-700">
+                    이번달 루틴 <span className="font-bold text-purple-700">{monthlyDeferredCurrent}/{monthlyDeferredTotalTarget}</span> 진행 중
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeFilter === "all" && totalItems === 0 && deferredRoutines.length === 0 && (
             <div className={`${itemCardClass} p-8 text-center`}>
               <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-600 text-[13px]">항목 없음</p>

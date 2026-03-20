@@ -5,6 +5,8 @@ import {
   Circle,
   CheckCircle2,
   Clock,
+  Bell,
+  BellOff,
   Flag,
   MoreVertical,
   Filter,
@@ -55,6 +57,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
     title: "",
     category: "업무",
     time: "",
+    notificationEnabled: false,
     priority: "medium" as const,
     dueDate: "오늘",
     projectId: "",
@@ -114,6 +117,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       title: newTodo.title,
       category: newTodo.category,
       time: newTodo.time || undefined,
+      notificationEnabled: newTodo.time ? newTodo.notificationEnabled : false,
       completed: false,
       priority: newTodo.priority,
       dueDate: newTodo.dueDate,
@@ -127,6 +131,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
         title: "",
         category: "업무",
         time: "",
+        notificationEnabled: false,
         priority: "medium",
         dueDate: "오늘",
         projectId: "",
@@ -196,6 +201,18 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
     requestAnimationFrame(() => {
       target.scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
+  };
+
+  const requestNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return false;
+    }
+
+    if (Notification.permission === "granted") {
+      return true;
+    }
+
+    return (await Notification.requestPermission()) === "granted";
   };
 
   const filteredTodos = todos.filter((todo) => {
@@ -352,6 +369,12 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                             <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
                               <Clock className="w-2.5 h-2.5" />
                               {todo.time}
+                            </span>
+                          )}
+                          {todo.time && todo.notificationEnabled && (
+                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
+                              <Bell className="w-2.5 h-2.5" />
+                              알림 ON
                             </span>
                           )}
                           {hasSubTasks && (
@@ -796,7 +819,13 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   <input
                     type="time"
                     value={newTodo.time}
-                    onChange={(e) => setNewTodo({ ...newTodo, time: e.target.value })}
+                    onChange={(e) =>
+                      setNewTodo({
+                        ...newTodo,
+                        time: e.target.value,
+                        notificationEnabled: e.target.value ? newTodo.notificationEnabled : false,
+                      })
+                    }
                     onFocus={ensureFieldVisibleOnFocus}
                     className={modalFieldClass}
                   />
@@ -816,6 +845,37 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                     <option value="low">낮음</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  알림
+                </label>
+                <button
+                  type="button"
+                  disabled={!newTodo.time}
+                  onClick={async () => {
+                    if (!newTodo.time) return;
+                    if (!newTodo.notificationEnabled) {
+                      const granted = await requestNotificationPermission();
+                      if (!granted) return;
+                    }
+                    setNewTodo({ ...newTodo, notificationEnabled: !newTodo.notificationEnabled });
+                  }}
+                  className={`w-full h-11 px-4 rounded-xl border-2 text-[13px] font-semibold flex items-center justify-center gap-2 transition-all ${
+                    !newTodo.time
+                      ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                      : newTodo.notificationEnabled
+                        ? "bg-amber-50 text-amber-700 border-amber-300"
+                        : "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}
+                >
+                  {newTodo.notificationEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                  {newTodo.notificationEnabled ? "알림 켜짐" : "알림 꺼짐 (기본)"}
+                </button>
+                {!newTodo.time && (
+                  <p className="text-[11px] text-gray-400 mt-1">시간을 먼저 설정하면 알림을 켤 수 있어요.</p>
+                )}
               </div>
 
               <div>
@@ -933,7 +993,13 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   <input
                     type="time"
                     value={editingTodo.time || ''}
-                    onChange={(e) => setEditingTodo({ ...editingTodo, time: e.target.value })}
+                    onChange={(e) =>
+                      setEditingTodo({
+                        ...editingTodo,
+                        time: e.target.value,
+                        notificationEnabled: e.target.value ? editingTodo.notificationEnabled : false,
+                      })
+                    }
                     onFocus={ensureFieldVisibleOnFocus}
                     className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[13px]"
                   />
@@ -953,6 +1019,37 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                     <option value="low">낮음</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  알림
+                </label>
+                <button
+                  type="button"
+                  disabled={!editingTodo.time}
+                  onClick={async () => {
+                    if (!editingTodo.time) return;
+                    if (!editingTodo.notificationEnabled) {
+                      const granted = await requestNotificationPermission();
+                      if (!granted) return;
+                    }
+                    setEditingTodo({ ...editingTodo, notificationEnabled: !editingTodo.notificationEnabled });
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl border-2 text-[13px] font-semibold flex items-center justify-center gap-2 transition-all ${
+                    !editingTodo.time
+                      ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                      : editingTodo.notificationEnabled
+                        ? "bg-amber-50 text-amber-700 border-amber-300"
+                        : "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}
+                >
+                  {editingTodo.notificationEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                  {editingTodo.notificationEnabled ? "알림 켜짐" : "알림 꺼짐 (기본)"}
+                </button>
+                {!editingTodo.time && (
+                  <p className="text-[11px] text-gray-400 mt-1">시간을 먼저 설정하면 알림을 켤 수 있어요.</p>
+                )}
               </div>
 
               <div>
