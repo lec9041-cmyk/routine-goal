@@ -122,6 +122,8 @@ export interface DataContextType {
   addGoalCategory: (category: string) => void;
   updateGoalCategory: (oldName: string, newName: string) => void;
   deleteGoalCategory: (category: string) => void;
+
+  resetAllData: () => void;
 }
 
 // Create context with undefined initial value
@@ -448,6 +450,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setGoals(prev => prev.map(g => g.category === category ? { ...g, category: "기타" } : g));
   };
 
+  const resetAllData = () => {
+    setTodos(initialTodos);
+    setGoals(initialGoals);
+    setRoutines(initialRoutines);
+    setProjects(initialProjects);
+  };
+
   const value: DataContextType = {
     todos,
     addTodo,
@@ -477,6 +486,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addGoalCategory,
     updateGoalCategory,
     deleteGoalCategory,
+    resetAllData,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
