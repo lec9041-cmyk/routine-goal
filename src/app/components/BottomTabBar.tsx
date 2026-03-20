@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { Home, CheckSquare, Target, Calendar } from "lucide-react";
+import { Home, CheckSquare, Target } from "lucide-react";
 
-type ScreenId = "home" | "todos" | "goals-routines" | "calendar";
+type ScreenId = "home" | "todos" | "goals-routines";
 
 interface BottomTabBarProps {
   currentScreen: ScreenId;
@@ -12,7 +12,6 @@ const tabs = [
   { id: "home" as const, label: "홈", icon: Home },
   { id: "todos" as const, label: "할일", icon: CheckSquare },
   { id: "goals-routines" as const, label: "목표·루틴", icon: Target },
-  { id: "calendar" as const, label: "달력", icon: Calendar },
 ];
 
 const BottomTabBarComponent = ({ currentScreen, onNavigate }: BottomTabBarProps) => {

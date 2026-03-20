@@ -3,7 +3,7 @@ import { CheckSquare, Target, Calendar as CalendarIcon, ChevronRight, Circle, Ch
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
+type ScreenId = 'home' | 'todos' | 'goals-routines';
 
 interface MainDashboardProps {
   onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean; date?: Date }) => void;
@@ -543,7 +543,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 return (
                   <button
                     key={day}
-                    onClick={() => onNavigate('calendar', { date })}
+                    onClick={() => onNavigate('home')}
                     className={`flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-xl transition-all ${isToday ? 'bg-blue-500 text-white shadow-md scale-105' : 'bg-transparent text-gray-700 hover:bg-white/50'}`}
                   >
                     <span className={`text-[10px] font-medium mb-0.5 ${isToday ? 'text-white' : index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : 'text-gray-500'}`}>

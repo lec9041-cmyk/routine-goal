@@ -3,7 +3,7 @@ import { GoalsScreen } from "./GoalsScreen";
 import { RoutineScreen } from "./RoutineScreen";
 import { HelpCircle, X } from "lucide-react";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
+type ScreenId = 'home' | 'todos' | 'goals-routines';
 
 interface GoalRoutineScreenProps {
   onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean }) => void;

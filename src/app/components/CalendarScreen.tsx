@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Plus, Circle, CheckCircle2, Calendar as CalendarIcon, MoreHorizontal, X } from "lucide-react";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
+type ScreenId = 'home' | 'todos' | 'goals-routines';
 
 interface CalendarEvent {
   id: string;

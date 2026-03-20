@@ -25,7 +25,7 @@ import type { Todo, Project } from "../context/DataContext";
 import { ProjectManageModal } from "./ProjectManageModal";
 import { ModalPortal } from "./common/ModalPortal";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
+type ScreenId = 'home' | 'todos' | 'goals-routines' | 'ai';
 
 interface TodoScreenProps {
   onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean }) => void;
