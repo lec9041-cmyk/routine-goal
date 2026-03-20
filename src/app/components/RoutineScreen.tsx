@@ -66,9 +66,11 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     specificDays: [] as number[],
   });
 
-  const [viewMode, setViewMode] = useState<"all" | "daily" | "weekly" | "monthly">("all");
+  const [viewMode, setViewMode] = useState<"all" | "weekly" | "monthly">("all");
+  const contentContainerClass = "px-4";
   const today = new Date();
   const todayKey = toDateKey(today);
+  const isSelectedDateToday = selectedDateKey === todayKey;
   const referenceDate = new Date(`${selectedDateKey}T00:00:00`);
   const isPastDate = selectedDateKey < todayKey;
   const isReadOnlyPastDate = !allowPastDateEdit && isPastDate;
