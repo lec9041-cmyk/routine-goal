@@ -66,6 +66,20 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     && routine.scheduleType !== "specific"
   );
 
+  const isRoutineDoneForSelectedDate = (routine: (typeof selectedDateRoutines)[number]) => {
+    const isDoneToday = (routine.completedDates ?? []).includes(toDateKey(selectedDate));
+    return routine.frequency === "weekly" && routine.trackingType === "count"
+      ? isDoneToday
+      : routine.isCompleted;
+  };
+
+  const incompleteActionableRoutines = actionableRoutines.filter(
+    (routine) => !isRoutineDoneForSelectedDate(routine)
+  );
+  const completedActionableRoutines = actionableRoutines.filter(
+    (routine) => isRoutineDoneForSelectedDate(routine)
+  );
+
   // 선택한 날짜가 오늘인지 확인
   const isSelectedToday = isSameDay(selectedDate, today);
   
@@ -174,9 +188,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const renderRoutineListItem = (routine: (typeof selectedDateRoutines)[number], tone: "purple" | "indigo" = "purple") => {
     const displayCount = routine.completedCount;
     const isCompleted = routine.isCompleted;
-    const isDoneToday = (routine.completedDates ?? []).includes(toDateKey(selectedDate));
-    const showDailyCompletionStyle =
-      routine.frequency === "weekly" && routine.trackingType === "count" ? isDoneToday : isCompleted;
+    const showDailyCompletionStyle = isRoutineDoneForSelectedDate(routine);
     const hasProgress = displayCount > 0;
     const progressPercent = Math.min(100, Math.round((displayCount / routine.targetCount) * 100));
     const linkedGoal = routine.linkedGoalId
@@ -212,13 +224,20 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               </p>
             )}
             <div className="flex items-start justify-between gap-2">
-              <p
-                className={`text-[13px] leading-snug font-medium min-w-0 truncate ${
-                  showDailyCompletionStyle ? "text-gray-400 line-through" : "text-gray-900"
-                }`}
-              >
-                {routine.icon} {routine.title}
-              </p>
+              <div className="min-w-0">
+                <p
+                  className={`text-[13px] leading-snug font-medium truncate ${
+                    showDailyCompletionStyle ? "text-gray-400 line-through" : "text-gray-900"
+                  }`}
+                >
+                  {routine.icon} {routine.title}
+                </p>
+                {showDailyCompletionStyle && (
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 mt-1 text-[10px] font-bold text-emerald-700">
+                    오늘 완료!
+                  </span>
+                )}
+              </div>
               <span
                 className={`text-[11px] leading-tight font-semibold flex-shrink-0 ${
                   showDailyCompletionStyle ? "text-gray-400" : hasProgress ? "text-indigo-600" : "text-gray-600"
@@ -511,7 +530,12 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 </button>
               </div>
 
-              {actionableRoutines.map((routine) => renderRoutineListItem(routine))}
+              {incompleteActionableRoutines.map((routine) => renderRoutineListItem(routine))}
+
+              {completedActionableRoutines.length > 0 && (
+                <h4 className="text-[11px] font-bold text-emerald-700 mt-2 px-1">오늘 완료한 루틴</h4>
+              )}
+              {completedActionableRoutines.map((routine) => renderRoutineListItem(routine))}
 
               {actionableRoutines.length === 0 && activeFilter === "routine" && (
                 <div className={`${itemCardClass} p-6 text-center`}>
