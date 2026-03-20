@@ -30,7 +30,7 @@ interface GoalsScreenProps {
 }
 
 export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: GoalsScreenProps) {
-  const { goals, addGoal, updateGoal, deleteGoal, addRoutine, deleteRoutine, updateRoutine, goalCategories, addGoalCategory, updateGoalCategory, deleteGoalCategory } = useData();
+  const { goals, routines, addGoal, updateGoal, deleteGoal, addRoutine, deleteRoutine, updateRoutine, goalCategories, addGoalCategory, updateGoalCategory, deleteGoalCategory } = useData();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddRoutineModal, setShowAddRoutineModal] = useState(false);
@@ -40,9 +40,6 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   const [showRoutineMenu, setShowRoutineMenu] = useState<string | null>(null); // 루틴 메뉴
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null); // 수정 중인 루틴 ID
   const [showEditRoutineModal, setShowEditRoutineModal] = useState(false);
-  const [showSubGoalModal, setShowSubGoalModal] = useState(false); // 세부 목표 추가 모달
-  const [parentGoalForSubGoal, setParentGoalForSubGoal] = useState<string>(""); // 세부 목표를 추가할 부모 목표
-  const [selectedGoalForMandala, setSelectedGoalForMandala] = useState<Goal | null>(null); // 만다라트로 볼 목표
   const [showCategoryManage, setShowCategoryManage] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
@@ -51,6 +48,21 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   const [showGoalMenu, setShowGoalMenu] = useState<string | null>(null); // 목표 메뉴
   const [showEditGoalModal, setShowEditGoalModal] = useState(false); // 목표 수정 모달
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null); // 수정 중인 목표
+  const [editingGoalForm, setEditingGoalForm] = useState({
+    title: "",
+    description: "",
+    category: "건강",
+    endDate: "",
+    color: "from-blue-100 to-blue-200",
+  });
+  const [editingRoutineForm, setEditingRoutineForm] = useState({
+    title: "",
+    icon: "🎯",
+    frequency: "weekly" as "daily" | "weekly" | "monthly",
+    trackingType: "count" as "count" | "days",
+    targetCount: 1,
+    selectedDays: [] as number[],
+  });
   const [newGoalError, setNewGoalError] = useState("");
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const newGoalTitleRef = useRef<HTMLInputElement>(null);
@@ -190,16 +202,81 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     setShowAddRoutineModal(true);
   };
 
-  const RoutineList = ({ routines }: { routines: LinkedRoutine[] }) => {
-    if (routines.length === 0) return null;
+  const openEditGoalModal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setEditingGoalForm({
+      title: goal.title,
+      description: goal.description,
+      category: goal.category,
+      endDate: goal.endDate,
+      color: goal.color,
+    });
+    setShowEditGoalModal(true);
+  };
+
+  const saveGoalEdit = () => {
+    if (!editingGoal || !editingGoalForm.title.trim()) return;
+    updateGoal(editingGoal.id, {
+      title: editingGoalForm.title.trim(),
+      description: editingGoalForm.description,
+      category: editingGoalForm.category,
+      endDate: editingGoalForm.endDate,
+      color: editingGoalForm.color,
+    });
+    setShowEditGoalModal(false);
+    setEditingGoal(null);
+  };
+
+  const openEditRoutineModal = (routineId: string) => {
+    const routine = routines.find((item) => item.id === routineId);
+    if (!routine) return;
+
+    setEditingRoutineId(routineId);
+    setEditingRoutineForm({
+      title: routine.title,
+      icon: routine.icon,
+      frequency: routine.frequency,
+      trackingType: routine.trackingType,
+      targetCount: routine.targetCount,
+      selectedDays: routine.selectedDays ?? [],
+    });
+    setShowEditRoutineModal(true);
+  };
+
+  const saveRoutineEdit = () => {
+    if (!editingRoutineId || !editingRoutineForm.title.trim()) return;
+    updateRoutine(editingRoutineId, {
+      title: editingRoutineForm.title.trim(),
+      icon: editingRoutineForm.icon,
+      frequency: editingRoutineForm.frequency,
+      trackingType: editingRoutineForm.trackingType,
+      targetCount: editingRoutineForm.targetCount,
+      selectedDays: editingRoutineForm.selectedDays,
+    });
+    setShowEditRoutineModal(false);
+    setEditingRoutineId(null);
+  };
+
+  const RoutineList = ({ routines: linkedRoutines }: { routines: LinkedRoutine[] }) => {
+    if (linkedRoutines.length === 0) return null;
 
     return (
       <div className="space-y-2 mt-2">
-        {routines.map((routine) => (
-          <div
-            key={routine.id}
-            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50"
-          >
+        {linkedRoutines.map((routine) => {
+          let pressTimer: NodeJS.Timeout;
+          return (
+            <div
+              key={routine.id}
+              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 relative"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowRoutineMenu(routine.id);
+              }}
+              onTouchStart={() => {
+                pressTimer = setTimeout(() => setShowRoutineMenu(routine.id), 450);
+              }}
+              onTouchEnd={() => clearTimeout(pressTimer)}
+            >
             <span className="text-2xl">{routine.icon}</span>
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-medium text-gray-800 mb-1">
@@ -220,8 +297,46 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
             {routine.currentProgress >= 100 && (
               <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
             )}
-          </div>
-        ))}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowRoutineMenu(showRoutineMenu === routine.id ? null : routine.id);
+              }}
+              className="w-8 h-8 rounded-full hover:bg-gray-200/70 flex items-center justify-center"
+              aria-label={`${routine.title} 루틴 액션`}
+            >
+              <MoreVertical className="w-4 h-4 text-gray-600" />
+            </button>
+
+            {showRoutineMenu === routine.id && (
+              <div className="absolute right-2 top-12 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-[100] min-w-[112px]">
+                <button
+                  onClick={() => {
+                    openEditRoutineModal(routine.id);
+                    setShowRoutineMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  수정
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`"${routine.title}" 루틴을 삭제하시겠습니까?`)) {
+                      deleteRoutine(routine.id);
+                    }
+                    setShowRoutineMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-[12px] text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  삭제
+                </button>
+              </div>
+            )}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -263,8 +378,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingGoal(goal);
-                        setShowEditGoalModal(true);
+                        openEditGoalModal(goal);
                         setShowGoalMenu(null);
                       }}
                       className="w-full px-3 py-1.5 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -400,22 +514,31 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
         {/* View Mode Toggle */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[18px] font-bold text-gray-900">내 목표</h2>
-          <button
-            onClick={() => setViewMode(viewMode === 'list' ? 'mandala' : 'list')}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            {viewMode === 'list' ? (
-              <>
-                <Grid3x3 className="w-4 h-4 text-purple-600" />
-                <span className="text-[13px] font-semibold text-gray-700">만다라트 보기</span>
-              </>
-            ) : (
-              <>
-                <List className="w-4 h-4 text-purple-600" />
-                <span className="text-[13px] font-semibold text-gray-700">리스트 보기</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCategoryManage(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              <Settings className="w-4 h-4 text-gray-600" />
+              <span className="text-[12px] font-semibold text-gray-700">카테고리</span>
+            </button>
+            <button
+              onClick={() => setViewMode(viewMode === 'list' ? 'mandala' : 'list')}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              {viewMode === 'list' ? (
+                <>
+                  <Grid3x3 className="w-4 h-4 text-purple-600" />
+                  <span className="text-[13px] font-semibold text-gray-700">만다라트 보기</span>
+                </>
+              ) : (
+                <>
+                  <List className="w-4 h-4 text-purple-600" />
+                  <span className="text-[13px] font-semibold text-gray-700">리스트 보기</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Goals Content */}
@@ -499,8 +622,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                             <div className="absolute inset-0 bg-white rounded-lg shadow-lg z-50 flex flex-col p-2 gap-1">
                               <button
                                 onClick={() => {
-                                  setEditingRoutineId(routine.id);
-                                  setShowEditRoutineModal(true);
+                                  openEditRoutineModal(routine.id);
                                   setShowRoutineMenu(null);
                                 }}
                                 className="flex-1 text-[10px] font-semibold text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -897,6 +1019,197 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
         </ModalPortal>
       )}
 
+      {showCategoryManage && (
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+              <div className="px-5 pt-4 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-800">목표 카테고리 관리</h2>
+                  <button
+                    onClick={() => {
+                      setShowCategoryManage(false);
+                      setShowCategoryInput(false);
+                      setEditingCategory(null);
+                    }}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {goalCategories.map((category) => (
+                    <div key={category} className="flex items-center gap-2 p-2 rounded-xl bg-gray-50">
+                      {editingCategory === category ? (
+                        <>
+                          <input
+                            type="text"
+                            value={editingCategoryName}
+                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                            className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-purple-300"
+                          />
+                          <button
+                            onClick={() => {
+                              const nextName = editingCategoryName.trim();
+                              if (!nextName || nextName === category) {
+                                setEditingCategory(null);
+                                return;
+                              }
+                              updateGoalCategory(category, nextName);
+                              setEditingCategory(null);
+                            }}
+                            className="px-3 py-2 text-[12px] text-purple-600 font-semibold"
+                          >
+                            저장
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-[13px] font-medium text-gray-800">{category}</span>
+                          <button
+                            onClick={() => {
+                              setEditingCategory(category);
+                              setEditingCategoryName(category);
+                            }}
+                            className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`"${category}" 카테고리를 삭제하시겠습니까?`)) {
+                                deleteGoalCategory(category);
+                              }
+                            }}
+                            className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {showCategoryInput ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="새 카테고리 이름"
+                      className="flex-1 h-10 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    />
+                    <button
+                      onClick={() => {
+                        const nextName = newCategoryName.trim();
+                        if (!nextName) return;
+                        addGoalCategory(nextName);
+                        setNewCategoryName("");
+                        setShowCategoryInput(false);
+                      }}
+                      className="px-3 py-2 text-[12px] font-semibold text-purple-600"
+                    >
+                      추가
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowCategoryInput(true)}
+                    className="w-full mt-3 py-2.5 rounded-xl bg-purple-50 text-purple-600 text-[13px] font-semibold"
+                  >
+                    + 카테고리 추가
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {showEditGoalModal && editingGoal && (
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+              <div className="px-5 pt-4 pb-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-800">목표 수정</h2>
+                  <button
+                    onClick={() => {
+                      setShowEditGoalModal(false);
+                      setEditingGoal(null);
+                    }}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-600" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={editingGoalForm.title}
+                  onChange={(e) => setEditingGoalForm({ ...editingGoalForm, title: e.target.value })}
+                  placeholder="목표 제목"
+                  className={goalModalInputClass}
+                />
+                <textarea
+                  value={editingGoalForm.description}
+                  onChange={(e) => setEditingGoalForm({ ...editingGoalForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+                />
+                <div className="flex gap-2 flex-wrap">
+                  {goalCategories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setEditingGoalForm({ ...editingGoalForm, category })}
+                      className={`${goalModalChipClass} ${editingGoalForm.category === category ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="date"
+                  value={editingGoalForm.endDate}
+                  onChange={(e) => setEditingGoalForm({ ...editingGoalForm, endDate: e.target.value })}
+                  className={goalModalDateInputClass}
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  {colorOptions.map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => setEditingGoalForm({ ...editingGoalForm, color: color.value })}
+                      className={`h-10 rounded-xl border ${editingGoalForm.color === color.value ? "border-purple-400 bg-purple-50" : "border-gray-200 bg-white"}`}
+                    >
+                      <span className={`inline-block w-5 h-5 rounded-md bg-gradient-to-br ${color.value}`} />
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowEditGoalModal(false);
+                      setEditingGoal(null);
+                    }}
+                    className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 text-[14px] font-medium"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={saveGoalEdit}
+                    disabled={!editingGoalForm.title.trim()}
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white text-[14px] font-medium disabled:opacity-50"
+                  >
+                    저장
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
       {/* Edit Routine Modal */}
       {showEditRoutineModal && editingRoutineId && (
         <ModalPortal>
@@ -923,16 +1236,8 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">루틴 제목</label>
                   <input
                     type="text"
-                    value={goals.find(g => g.linkedRoutines.some(r => r.id === editingRoutineId))?.linkedRoutines.find(r => r.id === editingRoutineId)?.title || ""}
-                    onChange={(e) => {
-                      const goal = goals.find(g => g.linkedRoutines.some(r => r.id === editingRoutineId));
-                      if (goal) {
-                        const routine = goal.linkedRoutines.find(r => r.id === editingRoutineId);
-                        if (routine) {
-                          updateRoutine(routine.id, { title: e.target.value });
-                        }
-                      }
-                    }}
+                    value={editingRoutineForm.title}
+                    onChange={(e) => setEditingRoutineForm({ ...editingRoutineForm, title: e.target.value })}
                     placeholder="예: 운동하기"
                     className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
                   />
@@ -945,17 +1250,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     {iconOptions.map((icon) => (
                       <button
                         key={icon}
-                        onClick={() => {
-                          const goal = goals.find(g => g.linkedRoutines.some(r => r.id === editingRoutineId));
-                          if (goal) {
-                            const routine = goal.linkedRoutines.find(r => r.id === editingRoutineId);
-                            if (routine) {
-                              updateRoutine(routine.id, { icon });
-                            }
-                          }
-                        }}
+                        onClick={() => setEditingRoutineForm({ ...editingRoutineForm, icon })}
                         className={`w-12 h-12 rounded-xl text-2xl flex items-center justify-center transition-all ${
-                          goals.find(g => g.linkedRoutines.some(r => r.id === editingRoutineId))?.linkedRoutines.find(r => r.id === editingRoutineId)?.icon === icon
+                          editingRoutineForm.icon === icon
                             ? "bg-purple-100 ring-2 ring-purple-400 scale-110"
                             : "bg-gray-100 hover:scale-105"
                         }`}
@@ -965,6 +1262,49 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     ))}
                   </div>
                 </div>
+
+                <div>
+                  <label className="text-[13px] font-medium text-gray-700 mb-2 block">반복 주기</label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: "daily", label: "일일" },
+                      { value: "weekly", label: "주간" },
+                      { value: "monthly", label: "월간" },
+                    ].map((freq) => (
+                      <button
+                        key={freq.value}
+                        onClick={() =>
+                          setEditingRoutineForm({
+                            ...editingRoutineForm,
+                            frequency: freq.value as "daily" | "weekly" | "monthly",
+                          })
+                        }
+                        className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium ${
+                          editingRoutineForm.frequency === freq.value ? "bg-purple-500 text-white" : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {freq.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {(editingRoutineForm.frequency === "daily" || editingRoutineForm.trackingType === "count") && (
+                  <div>
+                    <label className="text-[13px] font-medium text-gray-700 mb-2 block">목표 횟수</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingRoutineForm.targetCount}
+                      onChange={(e) =>
+                        setEditingRoutineForm({
+                          ...editingRoutineForm,
+                          targetCount: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -979,13 +1319,8 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                   취소
                 </button>
                 <button
-                  onClick={() => {
-                    if (goals.find(g => g.linkedRoutines.some(r => r.id === editingRoutineId))?.linkedRoutines.find(r => r.id === editingRoutineId)?.title.trim()) {
-                      setShowEditRoutineModal(false);
-                      setEditingRoutineId(null);
-                    }
-                  }}
-                  disabled={!goals.find(g => g.linkedRoutines.some(r => r.id === editingRoutineId))?.linkedRoutines.find(r => r.id === editingRoutineId)?.title.trim()}
+                  onClick={saveRoutineEdit}
+                  disabled={!editingRoutineForm.title.trim()}
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   수정하기
