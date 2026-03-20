@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Folder } from "lucide-react";
 import { useData } from "../context/DataContext";
+import { ModalPortal } from "./common/ModalPortal";
 import {
   getRoutineDisplayCount,
   isRoutineCompleted,
@@ -18,10 +19,19 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
+  const [quickAddError, setQuickAddError] = useState("");
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "todo" | "routine">("all");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekOffset, setWeekOffset] = useState(0); // 주 단위 오프셋
+
+  useEffect(() => {
+    if (!showQuickAdd) {
+      setQuickAddError("");
+      setIsQuickAdding(false);
+    }
+  }, [showQuickAdd]);
 
   const selectedDateString = formatDateString(selectedDate);
 
@@ -71,20 +81,30 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     ? "오늘 진행률"
     : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 진행률`;
 
-  const handleQuickAdd = () => {
-    if (!quickAddText.trim()) return;
+  const handleQuickAdd = async () => {
+    if (isQuickAdding) return;
+    if (!quickAddText.trim()) {
+      setQuickAddError("할일 제목은 필수입니다.");
+      return;
+    }
     
-    addTodo({
-      id: Date.now().toString(),
-      title: quickAddText,
-      category: "개인",
-      completed: false,
-      priority: "medium",
-      dueDate: selectedDateString, // 선택한 날짜로 할일 추가
-    });
-    
-    setQuickAddText("");
-    setShowQuickAdd(false);
+    setIsQuickAdding(true);
+    setQuickAddError("");
+    try {
+      addTodo({
+        id: Date.now().toString(),
+        title: quickAddText,
+        category: "개인",
+        completed: false,
+        priority: "medium",
+        dueDate: selectedDateString, // 선택한 날짜로 할일 추가
+      });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      setQuickAddText("");
+      setShowQuickAdd(false);
+    } finally {
+      setIsQuickAdding(false);
+    }
   };
 
   const greeting = () => {
@@ -487,9 +507,10 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
       {/* Quick Add Modal */}
       {showQuickAdd && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl w-full max-w-md p-6 animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
+        <ModalPortal>
+        <div className="modal-backdrop bg-black/50 flex items-end justify-center">
+          <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(78dvh,520px)] pb-0 animate-slide-up flex flex-col overflow-hidden">
+            <div className="shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-[18px] font-bold text-gray-900">할일 추가</h2>
               <button
                 onClick={() => setShowQuickAdd(false)}
@@ -498,27 +519,39 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
-            <p className="text-[12px] text-gray-500 mb-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 overscroll-contain">
+            <p className="text-[12px] text-gray-600 mb-3">
               {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일에 추가됩니다
             </p>
             <input
               type="text"
               value={quickAddText}
-              onChange={(e) => setQuickAddText(e.target.value)}
+              onChange={(e) => {
+                setQuickAddText(e.target.value);
+                if (quickAddError) setQuickAddError("");
+              }}
               onKeyPress={(e) => e.key === 'Enter' && handleQuickAdd()}
               placeholder="할일을 입력하세요..."
               autoFocus
+              aria-invalid={Boolean(quickAddError)}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[15px] mb-4"
             />
+            {quickAddError && (
+              <p className="mt-[-8px] mb-4 text-[12px] text-red-500">{quickAddError}</p>
+            )}
+            </div>
+            <div className="shrink-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
             <button
               onClick={handleQuickAdd}
-              disabled={!quickAddText.trim()}
-              className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!quickAddText.trim() || isQuickAdding}
+              className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
             >
-              추가하기
+              {isQuickAdding ? "추가 중..." : "추가하기"}
             </button>
+            </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Menu Modal */}

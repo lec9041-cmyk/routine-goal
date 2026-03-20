@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   Plus,
@@ -51,6 +51,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   const [showGoalMenu, setShowGoalMenu] = useState<string | null>(null); // 목표 메뉴
   const [showEditGoalModal, setShowEditGoalModal] = useState(false); // 목표 수정 모달
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null); // 수정 중인 목표
+  const [newGoalError, setNewGoalError] = useState("");
+  const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const newGoalTitleRef = useRef<HTMLInputElement>(null);
 
   // shouldOpenAddModal이 true면 모달 열기
   useEffect(() => {
@@ -58,6 +61,13 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       setShowAddModal(true);
     }
   }, [shouldOpenAddModal]);
+
+  useEffect(() => {
+    if (!showAddModal) {
+      setNewGoalError("");
+      setIsAddingGoal(false);
+    }
+  }, [showAddModal]);
   
   const [newGoal, setNewGoal] = useState({
     title: "",
@@ -105,8 +115,15 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     return calculateRoutinesProgress(goal.linkedRoutines);
   };
 
-  const handleAddGoal = () => {
-    if (!newGoal.title.trim()) return;
+  const handleAddGoal = async () => {
+    if (isAddingGoal) return;
+    if (!newGoal.title.trim()) {
+      setNewGoalError("목표 제목은 필수입니다.");
+      newGoalTitleRef.current?.focus();
+      return;
+    }
+    setIsAddingGoal(true);
+    setNewGoalError("");
 
     const goal: Goal = {
       id: Date.now().toString(),
@@ -120,15 +137,20 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       expanded: false,
     };
 
-    addGoal(goal);
-    setShowAddModal(false);
-    setNewGoal({
-      title: "",
-      description: "",
-      category: "건강",
-      endDate: "",
-      color: "from-blue-100 to-blue-200",
-    });
+    try {
+      addGoal(goal);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      setShowAddModal(false);
+      setNewGoal({
+        title: "",
+        description: "",
+        category: "건강",
+        endDate: "",
+        color: "from-blue-100 to-blue-200",
+      });
+    } finally {
+      setIsAddingGoal(false);
+    }
   };
 
   const handleAddRoutine = () => {
@@ -572,12 +594,20 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">목표 제목</label>
                   <input
+                    ref={newGoalTitleRef}
                     type="text"
                     value={newGoal.title}
-                    onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+                    onChange={(e) => {
+                      setNewGoal({ ...newGoal, title: e.target.value });
+                      if (newGoalError) setNewGoalError("");
+                    }}
                     placeholder="예: 건강한 생활 습관 만들기"
+                    aria-invalid={Boolean(newGoalError)}
                     className={goalModalInputClass}
                   />
+                  {newGoalError && (
+                    <p className="mt-1.5 text-[12px] text-red-500">{newGoalError}</p>
+                  )}
                 </div>
 
                 {/* Description Input */}
@@ -653,7 +683,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
               </div>
 
               {/* Action Buttons */}
-              <div className="shrink-0 sticky bottom-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom))]">
+              <div className="shrink-0 sticky bottom-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -663,10 +693,10 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
                 <button
                   onClick={handleAddGoal}
-                  disabled={!newGoal.title.trim()}
-                  className="flex-1 h-12 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!newGoal.title.trim() || isAddingGoal}
+                  className="flex-1 h-12 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:from-purple-200 disabled:to-purple-300 disabled:cursor-not-allowed"
                 >
-                  추가하기
+                  {isAddingGoal ? "추가 중..." : "추가하기"}
                 </button>
               </div>
               </div>

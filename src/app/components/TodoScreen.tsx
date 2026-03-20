@@ -1,4 +1,4 @@
-import { useState, useEffect, type FocusEvent } from "react";
+import { useState, useEffect, useRef, type FocusEvent } from "react";
 import {
   Plus,
   ChevronLeft,
@@ -48,6 +48,9 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [showAddSubTask, setShowAddSubTask] = useState<string | null>(null); // 서브태스크 추가 UI 표시할 할일 ID
   const [showProjectManage, setShowProjectManage] = useState(false);
+  const [newTodoError, setNewTodoError] = useState("");
+  const [isAddingTodo, setIsAddingTodo] = useState(false);
+  const newTodoTitleRef = useRef<HTMLInputElement>(null);
   const [newTodo, setNewTodo] = useState({
     title: "",
     category: "업무",
@@ -63,6 +66,13 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       setShowAddModal(true);
     }
   }, [shouldOpenAddModal]);
+
+  useEffect(() => {
+    if (!showAddModal) {
+      setNewTodoError("");
+      setIsAddingTodo(false);
+    }
+  }, [showAddModal]);
 
   const priorityColors = {
     high: "bg-red-400",
@@ -89,9 +99,16 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
     updateTodo(id, { expanded: !todo.expanded });
   };
 
-  const handleAddTodo = () => {
-    if (!newTodo.title.trim()) return;
+  const handleAddTodo = async () => {
+    if (isAddingTodo) return;
+    if (!newTodo.title.trim()) {
+      setNewTodoError("할일 제목은 필수입니다.");
+      newTodoTitleRef.current?.focus();
+      return;
+    }
 
+    setIsAddingTodo(true);
+    setNewTodoError("");
     const todo: Todo = {
       id: Date.now().toString(),
       title: newTodo.title,
@@ -103,16 +120,21 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       projectId: newTodo.projectId,
     };
 
-    addTodo(todo);
-    setNewTodo({
-      title: "",
-      category: "업무",
-      time: "",
-      priority: "medium",
-      dueDate: "오늘",
-      projectId: "",
-    });
-    setShowAddModal(false);
+    try {
+      addTodo(todo);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      setNewTodo({
+        title: "",
+        category: "업무",
+        time: "",
+        priority: "medium",
+        dueDate: "오늘",
+        projectId: "",
+      });
+      setShowAddModal(false);
+    } finally {
+      setIsAddingTodo(false);
+    }
   };
 
   const handleUpdateTodo = () => {
@@ -614,13 +636,21 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   할일
                 </label>
                 <input
+                  ref={newTodoTitleRef}
                   type="text"
                   value={newTodo.title}
-                  onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
+                  onChange={(e) => {
+                    setNewTodo({ ...newTodo, title: e.target.value });
+                    if (newTodoError) setNewTodoError("");
+                  }}
                   onFocus={ensureFieldVisibleOnFocus}
                   placeholder="할일을 입력하세요"
+                  aria-invalid={Boolean(newTodoError)}
                   className={modalFieldClass}
                 />
+                {newTodoError && (
+                  <p className="mt-1.5 text-[12px] text-red-500">{newTodoError}</p>
+                )}
               </div>
 
               <div>
@@ -828,12 +858,13 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
               </div>
             </div>
 
-            <div className="shrink-0 sticky bottom-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom))]">
+            <div className="shrink-0 sticky bottom-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
               <button
                 onClick={handleAddTodo}
-                className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all"
+                disabled={!newTodo.title.trim() || isAddingTodo}
+                className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
               >
-                추가하기
+                {isAddingTodo ? "추가 중..." : "추가하기"}
               </button>
             </div>
             </div>
