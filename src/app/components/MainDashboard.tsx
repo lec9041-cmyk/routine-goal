@@ -178,7 +178,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-24">
+    <div className="min-h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header - 간결하게 */}
       <div className="px-4 pt-6 pb-3">
         <div className="flex items-center justify-between">

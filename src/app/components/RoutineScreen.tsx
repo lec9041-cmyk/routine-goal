@@ -306,7 +306,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   };
 
   return (
-    <div className="min-h-screen bg-transparent pb-24">
+    <div className="min-h-full bg-transparent">
       {/* Header */}
       {!hideHeader && (
         <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
@@ -536,7 +536,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 {/* Repeat Type Selection */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">반복 기간</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
                       onClick={() => setNewRoutine({ ...newRoutine, repeatType: "forever" })}
                       className={`px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
@@ -562,7 +562,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
                 {/* Date Range (if period selected) */}
                 {newRoutine.repeatType === "period" && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-[13px] font-medium text-gray-700 mb-2 block">시작일</label>
                       <input
@@ -733,7 +733,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 {/* Time of Day */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">시간대</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
                       onClick={() => setNewRoutine({ ...newRoutine, timeOfDay: "morning" })}
                       className={`px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${

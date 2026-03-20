@@ -226,7 +226,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-20">
+    <div className="min-h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <div className="px-4 pt-10 pb-3">
         <div className="flex items-center justify-between mb-3">
@@ -985,7 +985,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     시간
