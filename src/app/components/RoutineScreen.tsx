@@ -23,7 +23,7 @@ import {
 import { toDateKey } from "../utils/dateUtils";
 import { ModalPortal } from "./common/ModalPortal";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
+type ScreenId = 'home' | 'todos' | 'goals-routines' | 'ai';
 
 interface RoutineScreenProps {
   onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean }) => void;

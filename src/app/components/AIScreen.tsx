@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, Send, Sparkles, Lightbulb, TrendingUp, Calendar } from "lucide-react";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
+type ScreenId = 'home' | 'todos' | 'goals-routines' | 'ai';
 
 interface Message {
   id: string;

@@ -21,7 +21,7 @@ import { useData } from "../context/DataContext";
 import type { Goal, LinkedRoutine } from "../context/DataContext";
 import { ModalPortal } from "./common/ModalPortal";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
+type ScreenId = 'home' | 'todos' | 'goals-routines' | 'ai';
 
 interface GoalsScreenProps {
   onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean }) => void;

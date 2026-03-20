@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CircleDashed, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
+import { CheckSquare, Target, Circle, CircleDashed, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
 import { useData } from "../context/DataContext";
 import {
   getRoutineDisplayCount,
   isRoutineCompleted,
 } from "../utils/routineProgress";
-import { isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
+import { addDays, isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
+type ScreenId = 'home' | 'todos' | 'goals-routines';
 
 interface MainDashboardProps {
-  onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean; date?: Date }) => void;
+  onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean }) => void;
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
@@ -97,6 +97,42 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
   const weeklyDeferred = deferredRoutines.filter((routine) => routine.frequency === "weekly");
   const monthlyDeferred = deferredRoutines.filter((routine) => routine.frequency === "monthly");
+
+  const getTodoDate = (dueDate?: string) => {
+    if (!dueDate) return null;
+    if (dueDate === "오늘") return today;
+    if (dueDate === "내일") return addDays(today, 1);
+
+    if (dueDate.includes("-")) {
+      const [year, month, day] = dueDate.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    return null;
+  };
+
+  const isWithinCurrentWeek = (date: Date) => {
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay());
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+
+    return date >= start && date < end;
+  };
+
+  const thisWeekTodos = todos.filter((todo) => {
+    const dueDate = getTodoDate(todo.dueDate);
+    return dueDate ? isWithinCurrentWeek(dueDate) : false;
+  });
+
+  const thisMonthTodos = todos.filter((todo) => {
+    const dueDate = getTodoDate(todo.dueDate);
+    return dueDate
+      ? dueDate.getFullYear() === today.getFullYear() && dueDate.getMonth() === today.getMonth()
+      : false;
+  });
 
   const handleQuickAdd = async () => {
     if (isQuickAdding) return;
@@ -335,6 +371,33 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           <p className="text-[11px] text-gray-600 mt-2">
             {completedItems} / {totalItems} 완료
           </p>
+        </div>
+      </div>
+
+      {/* 기간별 요약: 오늘 / 이번주 / 이번달 */}
+      <div className="px-4 mt-4">
+        <div className={`${surfaceCardClass} p-4`}>
+          <h3 className="text-[14px] font-bold text-gray-800 mb-3">기간별 포커스</h3>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2.5">
+              <p className="text-[11px] font-semibold text-blue-700">오늘</p>
+              <p className="text-[13px] text-gray-800 mt-1">
+                할일 {selectedDateTodos.length} · 루틴 {actionableRoutines.length}
+              </p>
+            </div>
+            <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2.5">
+              <p className="text-[11px] font-semibold text-indigo-700">이번주</p>
+              <p className="text-[13px] text-gray-800 mt-1">
+                할일 {thisWeekTodos.length} · 루틴 {weeklyDeferred.length}
+              </p>
+            </div>
+            <div className="rounded-xl bg-purple-50 border border-purple-100 px-3 py-2.5">
+              <p className="text-[11px] font-semibold text-purple-700">이번달</p>
+              <p className="text-[13px] text-gray-800 mt-1">
+                할일 {thisMonthTodos.length} · 루틴 {monthlyDeferred.length}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -632,12 +695,12 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               <button 
                 onClick={() => {
                   setShowMenu(false);
-                  onNavigate('calendar');
+                  onNavigate('todos');
                 }}
                 className="flex items-center gap-4 w-full p-3 rounded-xl hover:bg-gray-50 transition-all text-left"
               >
-                <CalendarIcon className="w-5 h-5 text-gray-600" />
-                <p className="text-[15px] font-medium text-gray-900">캘린더</p>
+                <CheckSquare className="w-5 h-5 text-gray-600" />
+                <p className="text-[15px] font-medium text-gray-900">할일 관리</p>
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Flame, Menu, X, User, Settings, Bell, LogOut, Palette, Plus, ChevronRight, Clock, ChevronDown, ChevronUp } from "lucide-react";
 
-type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
+type ScreenId = 'home' | 'todos' | 'goals-routines';
 
 interface MainDashboardProps {
   onNavigate: (screen: ScreenId, options?: { openAddModal?: boolean; date?: Date }) => void;
