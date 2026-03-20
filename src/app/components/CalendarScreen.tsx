@@ -255,7 +255,7 @@ export function CalendarScreen({ onNavigate, selectedDate: propSelectedDate }: C
       {/* Floating Add Button */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105"
+        className="fixed bottom-[calc(var(--app-bottom-space)+12px)] right-4 sm:right-6 w-14 h-14 rounded-full bg-blue-600 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105"
       >
         <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
       </button>
