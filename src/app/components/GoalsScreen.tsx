@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   Plus,
@@ -51,6 +51,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   const [showGoalMenu, setShowGoalMenu] = useState<string | null>(null); // 목표 메뉴
   const [showEditGoalModal, setShowEditGoalModal] = useState(false); // 목표 수정 모달
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null); // 수정 중인 목표
+  const [newGoalError, setNewGoalError] = useState("");
+  const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const newGoalTitleRef = useRef<HTMLInputElement>(null);
 
   // shouldOpenAddModal이 true면 모달 열기
   useEffect(() => {
@@ -58,6 +61,13 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       setShowAddModal(true);
     }
   }, [shouldOpenAddModal]);
+
+  useEffect(() => {
+    if (!showAddModal) {
+      setNewGoalError("");
+      setIsAddingGoal(false);
+    }
+  }, [showAddModal]);
   
   const [newGoal, setNewGoal] = useState({
     title: "",
@@ -84,6 +94,8 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     { name: "청록", value: "from-cyan-100 to-cyan-200" },
     { name: "주황", value: "from-orange-100 to-orange-200" },
   ];
+  const goalModalInputClass = "w-full h-11 px-4 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent";
+  const goalModalChipClass = "min-h-10 px-4 rounded-xl text-[13px] font-medium transition-all";
 
   const iconOptions = ["🎯", "💪", "📚", "💧", "🧘", "🏃", "📖", "✍️", "🎨", "💻"];
 
@@ -103,8 +115,15 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     return calculateRoutinesProgress(goal.linkedRoutines);
   };
 
-  const handleAddGoal = () => {
-    if (!newGoal.title.trim()) return;
+  const handleAddGoal = async () => {
+    if (isAddingGoal) return;
+    if (!newGoal.title.trim()) {
+      setNewGoalError("목표 제목은 필수입니다.");
+      newGoalTitleRef.current?.focus();
+      return;
+    }
+    setIsAddingGoal(true);
+    setNewGoalError("");
 
     const goal: Goal = {
       id: Date.now().toString(),
@@ -118,15 +137,20 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       expanded: false,
     };
 
-    addGoal(goal);
-    setShowAddModal(false);
-    setNewGoal({
-      title: "",
-      description: "",
-      category: "건강",
-      endDate: "",
-      color: "from-blue-100 to-blue-200",
-    });
+    try {
+      addGoal(goal);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      setShowAddModal(false);
+      setNewGoal({
+        title: "",
+        description: "",
+        category: "건강",
+        endDate: "",
+        color: "from-blue-100 to-blue-200",
+      });
+    } finally {
+      setIsAddingGoal(false);
+    }
   };
 
   const handleAddRoutine = () => {
@@ -551,30 +575,39 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       {showAddModal && (
         <ModalPortal>
           <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
-            <div className="px-5 pt-4 pb-6">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] pb-0 shadow-2xl animate-slide-up flex flex-col overflow-hidden">
+            <div className="shrink-0 px-5 pt-4 pb-4 border-b border-gray-100">
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">새 목표 추가</h2>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                 >
                   <X className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
+            </div>
 
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pb-4">
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4 overscroll-contain">
                 {/* Title Input */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">목표 제목</label>
                   <input
+                    ref={newGoalTitleRef}
                     type="text"
                     value={newGoal.title}
-                    onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+                    onChange={(e) => {
+                      setNewGoal({ ...newGoal, title: e.target.value });
+                      if (newGoalError) setNewGoalError("");
+                    }}
                     placeholder="예: 건강한 생활 습관 만들기"
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                    aria-invalid={Boolean(newGoalError)}
+                    className={goalModalInputClass}
                   />
+                  {newGoalError && (
+                    <p className="mt-1.5 text-[12px] text-red-500">{newGoalError}</p>
+                  )}
                 </div>
 
                 {/* Description Input */}
@@ -585,7 +618,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
                     placeholder="목표에 대한 간단한 설명을 입력하세요"
                     rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent resize-none"
+                    className="w-full min-h-[112px] px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -597,7 +630,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                       <button
                         key={category}
                         onClick={() => setNewGoal({ ...newGoal, category })}
-                        className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all ${
+                        className={`${goalModalChipClass} ${
                           newGoal.category === category
                             ? "bg-purple-100 text-purple-700"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-150"
@@ -616,24 +649,27 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     type="date"
                     value={newGoal.endDate}
                     onChange={(e) => setNewGoal({ ...newGoal, endDate: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                    className={goalModalInputClass}
                   />
                 </div>
 
                 {/* Color Selection */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">색상</label>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="grid grid-cols-3 gap-2">
                     {colorOptions.map((color) => (
                       <button
                         key={color.value}
                         onClick={() => setNewGoal({ ...newGoal, color: color.value })}
-                        className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color.value} transition-all ${
+                        className={`h-11 rounded-xl border transition-all flex items-center justify-center gap-1.5 ${
                           newGoal.color === color.value
-                            ? "ring-2 ring-purple-400 scale-110"
-                            : "hover:scale-105"
+                            ? "border-purple-400 bg-purple-50"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
                         }`}
-                      />
+                      >
+                        <span className={`w-5 h-5 rounded-lg bg-gradient-to-br ${color.value}`} />
+                        <span className="text-[11px] font-medium text-gray-700">{color.name}</span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -647,22 +683,23 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 mt-5">
+              <div className="shrink-0 sticky bottom-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-medium text-[14px] hover:bg-gray-200 transition-colors"
+                  className="flex-1 h-12 rounded-xl bg-gray-100 text-gray-700 font-medium text-[14px] hover:bg-gray-200 transition-colors"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleAddGoal}
-                  disabled={!newGoal.title.trim()}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!newGoal.title.trim() || isAddingGoal}
+                  className="flex-1 h-12 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:from-purple-200 disabled:to-purple-300 disabled:cursor-not-allowed"
                 >
-                  추가하기
+                  {isAddingGoal ? "추가 중..." : "추가하기"}
                 </button>
               </div>
-            </div>
+              </div>
             </div>
           </div>
         </ModalPortal>

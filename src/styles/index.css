@@ -4,6 +4,7 @@
 
 :root {
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --keyboard-inset: 0px;
   --bottom-tab-height: 64px;
   --app-bottom-space: calc(var(--bottom-tab-height) + var(--safe-area-bottom));
   --z-bottom-tab: 40;
@@ -49,6 +50,8 @@ body {
   position: fixed;
   inset: 0;
   z-index: var(--z-modal-backdrop);
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .modal-sheet {
@@ -56,4 +59,5 @@ body {
   z-index: var(--z-modal-sheet);
   max-height: calc(100dvh - var(--modal-top-gap));
   padding-bottom: var(--safe-area-bottom);
+  overscroll-behavior: contain;
 }
