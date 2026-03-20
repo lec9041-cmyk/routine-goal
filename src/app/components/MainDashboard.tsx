@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Folder } from "lucide-react";
+import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { ModalPortal } from "./common/ModalPortal";
 import {
@@ -15,7 +15,7 @@ interface MainDashboardProps {
 }
 
 export function MainDashboard({ onNavigate }: MainDashboardProps) {
-  const { todos, routines, projects, toggleTodo, addTodo, toggleRoutineForDate } = useData();
+  const { todos, routines, goals, projects, toggleTodo, addTodo, toggleRoutineForDate } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddText, setQuickAddText] = useState("");
@@ -322,24 +322,22 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
                 
                 <div className="flex-1 text-left min-w-0">
+                  {todo.projectId && (() => {
+                    const project = projects.find((p) => p.id === todo.projectId);
+                    if (!project) return null;
+
+                    return (
+                      <p className="text-[11px] text-gray-500 font-medium truncate mb-0.5">
+                        목표 · {project.title}
+                      </p>
+                    );
+                  })()}
                   <p className="text-[14px] leading-snug text-gray-900 font-medium">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${getCategoryStyle(todo.category).bg} ${getCategoryStyle(todo.category).text} text-[10px] font-bold mr-1`}>
                       {todo.category}
                     </span>
                     {todo.title}
                   </p>
-                  {todo.projectId && (() => {
-                    const project = projects.find(p => p.id === todo.projectId);
-                    if (project) {
-                      return (
-                        <span className={`inline-flex mt-1 text-[10px] text-gray-700 px-1.5 py-0.5 rounded-md font-semibold items-center gap-0.5 ${project.color}`}>
-                          <Folder className="w-2.5 h-2.5" />
-                          {project.title}
-                        </span>
-                      );
-                    }
-                    return null;
-                  })()}
                 </div>
 
                 {todo.time && (
@@ -369,24 +367,22 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 <CheckCircle2 className="w-4.5 h-4.5 text-blue-500 flex-shrink-0" />
                 
                 <div className="flex-1 text-left min-w-0">
+                  {todo.projectId && (() => {
+                    const project = projects.find((p) => p.id === todo.projectId);
+                    if (!project) return null;
+
+                    return (
+                      <p className="text-[11px] text-gray-400 font-medium truncate mb-0.5 line-through">
+                        목표 · {project.title}
+                      </p>
+                    );
+                  })()}
                   <p className="text-[13.5px] leading-snug text-gray-400 line-through">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${getCategoryStyle(todo.category).bg} ${getCategoryStyle(todo.category).text} text-[10px] font-bold mr-1 opacity-70`}>
                       {todo.category}
                     </span>
                     {todo.title}
                   </p>
-                  {todo.projectId && (() => {
-                    const project = projects.find(p => p.id === todo.projectId);
-                    if (project) {
-                      return (
-                        <span className={`inline-flex mt-1 text-[10px] text-gray-700 px-1.5 py-0.5 rounded-md font-semibold items-center gap-0.5 opacity-70 ${project.color}`}>
-                          <Folder className="w-2.5 h-2.5" />
-                          {project.title}
-                        </span>
-                      );
-                    }
-                    return null;
-                  })()}
                 </div>
 
                 {todo.time && (
@@ -429,6 +425,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               {selectedDateRoutines.map((routine) => {
                 const displayCount = routine.completedCount;
                 const isCompleted = routine.isCompleted;
+                const linkedGoal = routine.linkedGoalId
+                  ? goals.find((goal) => goal.id === routine.linkedGoalId)
+                  : null;
 
                 return (
                   <div
@@ -449,21 +448,31 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                         <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
                       )}
                       <div className="flex-1 text-left min-w-0">
+                        {linkedGoal && (
+                          <p
+                            className={`text-[11px] font-medium truncate mb-0.5 ${
+                              isCompleted ? "text-gray-400" : "text-gray-500"
+                            }`}
+                          >
+                            목표 · {linkedGoal.title}
+                          </p>
+                        )}
                         <p
                           className={`text-[13.5px] leading-snug font-medium ${
                             isCompleted ? "text-gray-400 line-through" : "text-gray-900"
                           }`}
                         >
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 text-[10px] font-bold mr-1">
+                          {routine.icon} {routine.title}
+                        </p>
+                        <p className="text-[11px] text-gray-600 mt-1 flex items-center gap-1.5">
+                          <span className="text-gray-500">
                             {routine.frequency === "daily"
                               ? "daily"
                               : routine.frequency === "weekly"
                               ? "weekly"
                               : "monthly"}
                           </span>
-                          {routine.icon} {routine.title}
-                        </p>
-                          <p className="text-[11px] text-gray-600 mt-1">
+                          <span className="text-gray-300">•</span>
                           {displayCount} / {routine.targetCount}
                         </p>
                       </div>
