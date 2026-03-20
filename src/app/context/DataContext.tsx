@@ -24,6 +24,7 @@ export interface Todo {
   title: string;
   category: string;
   time?: string;
+  notificationEnabled?: boolean;
   completed: boolean;
   priority: "high" | "medium" | "low";
   dueDate?: string;
@@ -62,6 +63,8 @@ export interface Routine {
   id: string;
   title: string;
   icon: string;
+  time?: string;
+  notificationEnabled?: boolean;
   frequency: "daily" | "weekly" | "monthly";
   targetCount: number;
   currentCount: number;
