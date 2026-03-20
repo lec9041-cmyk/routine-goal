@@ -6,6 +6,10 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --bottom-tab-height: 64px;
   --app-bottom-space: calc(var(--bottom-tab-height) + var(--safe-area-bottom));
+  --z-bottom-tab: 40;
+  --z-modal-backdrop: 80;
+  --z-modal-sheet: 81;
+  --modal-top-gap: 24px;
 }
 
 html,
@@ -36,7 +40,20 @@ body {
 .bottom-tab-bar {
   position: sticky;
   bottom: 0;
-  z-index: 40;
+  z-index: var(--z-bottom-tab);
   min-height: var(--bottom-tab-height);
   padding-bottom: var(--safe-area-bottom);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-backdrop);
+}
+
+.modal-sheet {
+  position: relative;
+  z-index: var(--z-modal-sheet);
+  max-height: calc(100dvh - var(--modal-top-gap));
+  padding-bottom: calc(24px + var(--safe-area-bottom));
 }
