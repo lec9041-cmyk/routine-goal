@@ -5,7 +5,7 @@ import {
   getRoutineDisplayCount,
   isRoutineCompleted,
 } from "../utils/routineProgress";
-import { addDays, isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
+import { isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines';
 
@@ -98,42 +98,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const weeklyDeferred = deferredRoutines.filter((routine) => routine.frequency === "weekly");
   const monthlyDeferred = deferredRoutines.filter((routine) => routine.frequency === "monthly");
 
-  const getTodoDate = (dueDate?: string) => {
-    if (!dueDate) return null;
-    if (dueDate === "오늘") return today;
-    if (dueDate === "내일") return addDays(today, 1);
-
-    if (dueDate.includes("-")) {
-      const [year, month, day] = dueDate.split("-").map(Number);
-      return new Date(year, month - 1, day);
-    }
-
-    return null;
-  };
-
-  const isWithinCurrentWeek = (date: Date) => {
-    const start = new Date(today);
-    start.setDate(today.getDate() - today.getDay());
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
-
-    return date >= start && date < end;
-  };
-
-  const thisWeekTodos = todos.filter((todo) => {
-    const dueDate = getTodoDate(todo.dueDate);
-    return dueDate ? isWithinCurrentWeek(dueDate) : false;
-  });
-
-  const thisMonthTodos = todos.filter((todo) => {
-    const dueDate = getTodoDate(todo.dueDate);
-    return dueDate
-      ? dueDate.getFullYear() === today.getFullYear() && dueDate.getMonth() === today.getMonth()
-      : false;
-  });
-
   const handleQuickAdd = async () => {
     if (isQuickAdding) return;
     const trimmedTitle = quickAddText.trim();
@@ -210,6 +174,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const renderRoutineListItem = (routine: (typeof selectedDateRoutines)[number], tone: "purple" | "indigo" = "purple") => {
     const displayCount = routine.completedCount;
     const isCompleted = routine.isCompleted;
+    const isDoneToday = (routine.completedDates ?? []).includes(toDateKey(selectedDate));
+    const showDailyCompletionStyle =
+      routine.frequency === "weekly" && routine.trackingType === "count" ? isDoneToday : isCompleted;
     const hasProgress = displayCount > 0;
     const progressPercent = Math.min(100, Math.round((displayCount / routine.targetCount) * 100));
     const linkedGoal = routine.linkedGoalId
@@ -219,7 +186,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     return (
       <div
         key={routine.id}
-        className={`${itemCardClass} ${isCompleted ? "opacity-70" : ""} ${hasProgress && !isCompleted ? "ring-1 ring-indigo-200/70 bg-indigo-50/40" : ""}`}
+        className={`${itemCardClass} ${showDailyCompletionStyle ? "opacity-70" : ""} ${hasProgress && !showDailyCompletionStyle ? "ring-1 ring-indigo-200/70 bg-indigo-50/40" : ""}`}
       >
         <button
           onClick={() =>
@@ -227,7 +194,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           }
           className="w-full flex items-center gap-2.5 p-2.5"
         >
-          {isCompleted ? (
+          {showDailyCompletionStyle ? (
             <CheckCircle2 className={`w-4.5 h-4.5 flex-shrink-0 ${tone === "indigo" ? "text-indigo-500" : "text-purple-500"}`} />
           ) : hasProgress ? (
             <CircleDashed className={`w-4.5 h-4.5 flex-shrink-0 ${tone === "indigo" ? "text-indigo-400" : "text-purple-400"}`} />
@@ -238,7 +205,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             {linkedGoal && (
               <p
                 className={`text-[10px] leading-tight font-medium truncate mb-0.5 ${
-                  isCompleted ? "text-gray-400" : "text-gray-500"
+                  showDailyCompletionStyle ? "text-gray-400" : "text-gray-500"
                 }`}
               >
                 {linkedGoal.title}
@@ -247,14 +214,14 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             <div className="flex items-start justify-between gap-2">
               <p
                 className={`text-[13px] leading-snug font-medium min-w-0 truncate ${
-                  isCompleted ? "text-gray-400 line-through" : "text-gray-900"
+                  showDailyCompletionStyle ? "text-gray-400 line-through" : "text-gray-900"
                 }`}
               >
                 {routine.icon} {routine.title}
               </p>
               <span
                 className={`text-[11px] leading-tight font-semibold flex-shrink-0 ${
-                  isCompleted ? "text-gray-400" : hasProgress ? "text-indigo-600" : "text-gray-600"
+                  showDailyCompletionStyle ? "text-gray-400" : hasProgress ? "text-indigo-600" : "text-gray-600"
                 }`}
               >
                 {displayCount}/{routine.targetCount}
@@ -371,33 +338,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           <p className="text-[11px] text-gray-600 mt-2">
             {completedItems} / {totalItems} 완료
           </p>
-        </div>
-      </div>
-
-      {/* 기간별 요약: 오늘 / 이번주 / 이번달 */}
-      <div className="px-4 mt-4">
-        <div className={`${surfaceCardClass} p-4`}>
-          <h3 className="text-[14px] font-bold text-gray-800 mb-3">기간별 포커스</h3>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2.5">
-              <p className="text-[11px] font-semibold text-blue-700">오늘</p>
-              <p className="text-[13px] text-gray-800 mt-1">
-                할일 {selectedDateTodos.length} · 루틴 {actionableRoutines.length}
-              </p>
-            </div>
-            <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2.5">
-              <p className="text-[11px] font-semibold text-indigo-700">이번주</p>
-              <p className="text-[13px] text-gray-800 mt-1">
-                할일 {thisWeekTodos.length} · 루틴 {weeklyDeferred.length}
-              </p>
-            </div>
-            <div className="rounded-xl bg-purple-50 border border-purple-100 px-3 py-2.5">
-              <p className="text-[11px] font-semibold text-purple-700">이번달</p>
-              <p className="text-[13px] text-gray-800 mt-1">
-                할일 {thisMonthTodos.length} · 루틴 {monthlyDeferred.length}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
