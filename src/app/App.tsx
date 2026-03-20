@@ -5,8 +5,9 @@ import { GoalRoutineScreen } from "./components/GoalRoutineScreen";
 import { BottomTabBar } from "./components/BottomTabBar";
 import { DataProvider } from "./context/DataContext";
 import { ReminderManager } from "./components/ReminderManager";
+import { SettingsScreen } from "./components/SettingsScreen";
 
-type ScreenId = "home" | "todos" | "goals-routines";
+type ScreenId = "home" | "todos" | "goals-routines" | "settings";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>("home");
@@ -29,6 +30,8 @@ export default function App() {
         return <TodoScreen onNavigate={handleNavigate} shouldOpenAddModal={shouldOpenAddModal} />;
       case "goals-routines":
         return <GoalRoutineScreen onNavigate={handleNavigate} shouldOpenAddModal={shouldOpenAddModal} />;
+      case "settings":
+        return <SettingsScreen />;
       default:
         return <MainDashboard onNavigate={handleNavigate} />;
     }
