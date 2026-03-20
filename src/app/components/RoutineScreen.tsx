@@ -2,9 +2,6 @@ import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   Plus,
-  Flame,
-  Circle,
-  CheckCircle2,
   Calendar as CalendarIcon,
   TrendingUp,
   Clock,
@@ -64,7 +61,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     specificDays: [] as number[],
   });
 
-  const [viewMode, setViewMode] = useState<"all" | "daily" | "weekly" | "monthly">("all");
+  const [viewMode, setViewMode] = useState<"all" | "weekly" | "monthly">("all");
   const today = new Date();
   const todayKey = toDateKey(today);
   const referenceDate = new Date(`${selectedDateKey}T00:00:00`);
@@ -139,12 +136,53 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     return (await Notification.requestPermission()) === "granted";
   };
 
-  const toggleRoutineComplete = (routine: Routine) => {
-    if (isReadOnlyPastDate) return;
-    toggleRoutineForDate(routine.id, allowPastDateEdit ? selectedDateKey : todayKey);
+  const getPeriodDateKeys = (routine: Routine, reference: Date) => {
+    const keys: string[] = [];
+
+    if (routine.frequency === "weekly") {
+      const start = new Date(reference);
+      start.setDate(reference.getDate() - reference.getDay());
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        keys.push(toDateKey(date));
+      }
+      return keys;
+    }
+
+    if (routine.frequency === "monthly") {
+      const year = reference.getFullYear();
+      const month = reference.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        keys.push(toDateKey(new Date(year, month, day)));
+      }
+      return keys;
+    }
+
+    return [toDateKey(reference)];
+  };
+
+  const incrementPeriodRoutine = (routine: Routine) => {
+    const candidateDate = getPeriodDateKeys(routine, referenceDate)
+      .find((dateKey) => !routine.completedDates?.includes(dateKey));
+
+    if (!candidateDate) return;
+    toggleRoutineForDate(routine.id, candidateDate);
+  };
+
+  const decrementPeriodRoutine = (routine: Routine) => {
+    const keysInPeriod = getPeriodDateKeys(routine, referenceDate);
+    const completedInPeriod = (routine.completedDates || [])
+      .filter((dateKey) => keysInPeriod.includes(dateKey))
+      .sort((a, b) => b.localeCompare(a));
+
+    if (completedInPeriod.length === 0) return;
+    toggleRoutineForDate(routine.id, completedInPeriod[0]);
   };
 
   const filteredRoutines = routines.filter((routine) => {
+    if (routine.frequency === "daily") return false;
     if (viewMode === "all") return true;
     return routine.frequency === viewMode;
   });
@@ -159,20 +197,12 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
   const completionRate = getTotalProgress(filteredRoutines);
 
-  const frequencyLabels = {
-    daily: "일일",
-    weekly: "주간",
-    monthly: "월간",
-  };
-
   const frequencyIcons = {
-    daily: "📅",
     weekly: "📆",
     monthly: "🗓️",
   };
 
   const groupedByFrequency = {
-    daily: filteredRoutines.filter((r) => r.frequency === "daily"),
     weekly: filteredRoutines.filter((r) => r.frequency === "weekly"),
     monthly: filteredRoutines.filter((r) => r.frequency === "monthly"),
   };
@@ -193,9 +223,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             const displayCount = getRoutineDisplayCount(routine, referenceDate);
             const periodCount = getRoutineCountForPeriod(routine, referenceDate);
             const progressPercentage = (periodCount / routine.targetCount) * 100;
-            const statusText = isCompleted
-              ? "체크됨, 다시 누르면 취소"
-              : "미체크, 누르면 완료 처리";
 
             return (
               <div
@@ -203,32 +230,10 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3"
               >
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => toggleRoutineComplete(routine)}
-                    className={`flex-shrink-0 transition-transform ${
-                      isReadOnlyPastDate ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
-                    }`}
-                    aria-label={`${routine.title} ${statusText}`}
-                    title={isReadOnlyPastDate ? "과거 날짜는 읽기 전용입니다." : "하루 1회 체크 · 다시 누르면 취소"}
-                    disabled={isReadOnlyPastDate}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-gray-300" />
-                    )}
-                  </button>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[16px]">{routine.icon}</span>
-                      <h4
-                        className={`text-[14px] font-semibold ${
-                          isCompleted
-                            ? "text-gray-400 line-through"
-                            : "text-gray-900"
-                        }`}
-                      >
+                      <h4 className="text-[14px] font-semibold text-gray-900">
                         {routine.title}
                       </h4>
                     </div>
@@ -249,8 +254,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                           알림 ON
                         </span>
                       )}
-                      <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium" title="하루 1회 체크 · 다시 누르면 취소">
-                        하루 1회 체크 · 다시 누르면 취소
+                      <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium">
+                        {routine.frequency === "weekly" ? "이번주 카운트" : "이번달 카운트"}
                       </span>
                     </div>
 
@@ -265,21 +270,30 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[11px] text-gray-600 font-bold">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => decrementPeriodRoutine(routine)}
+                          disabled={isReadOnlyPastDate || displayCount === 0}
+                          className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                          aria-label={`${routine.title} 카운트 감소`}
+                        >
+                          <Minus className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
+                        <span className="text-[12px] font-bold text-gray-700 min-w-[58px] text-center">
                           {displayCount}/{routine.targetCount}
                         </span>
-                        <span className="text-[10px] text-gray-400">
-                          하루 1회 체크, 다시 누르면 취소
-                        </span>
+                        <button
+                          onClick={() => incrementPeriodRoutine(routine)}
+                          disabled={isReadOnlyPastDate || displayCount >= routine.targetCount}
+                          className="w-7 h-7 rounded-lg bg-purple-100 hover:bg-purple-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                          aria-label={`${routine.title} 카운트 증가`}
+                        >
+                          <Plus className="w-3.5 h-3.5 text-purple-700" />
+                        </button>
                       </div>
-                      {/* Streak Info */}
-                      <div className="flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5 text-orange-400" />
-                        <p className="text-[11px] font-bold text-orange-500">
-                          {routine.streak}일
-                        </p>
-                      </div>
+                      <span className={`text-[11px] font-semibold ${isCompleted ? "text-green-600" : "text-gray-500"}`}>
+                        {isCompleted ? "목표 달성" : "진행 중"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -319,16 +333,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 }`}
               >
                 전체
-              </button>
-              <button
-                onClick={() => setViewMode("daily")}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-                  viewMode === "daily"
-                    ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-150"
-                }`}
-              >
-                📅 일일
               </button>
               <button
                 onClick={() => setViewMode("weekly")}
@@ -387,7 +391,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             <div>
               <p className="text-purple-600 text-[12px] mb-1 font-medium">
                 {viewMode === "all" && "전체 루틴"}
-                {viewMode === "daily" && (isSelectedDateToday ? "오늘의 루틴" : "선택한 날짜 루틴")}
                 {viewMode === "weekly" && (isSelectedDateToday ? "이번 주 루틴" : "선택한 날짜 기준 주간 루틴")}
                 {viewMode === "monthly" && (isSelectedDateToday ? "이번 달 루틴" : "선택한 날짜 기준 월간 루틴")}
               </p>
@@ -406,12 +409,11 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             />
           </div>
           <p className="text-purple-700 text-[12px]">
-            {completionRate > 0 ? "좋아요! 계속해서 루틴을 완성해보세요 💪" : "오늘의 루틴을 시작해보세요!"}
+            {completionRate > 0 ? "좋아요! 횟수를 채워가며 루틴을 관리해보세요 💪" : "주간/월간 루틴 카운트를 시작해보세요!"}
           </p>
         </div>
 
         {/* Routines by Frequency */}
-        <FrequencySection title="일일 루틴" routines={groupedByFrequency.daily} icon={frequencyIcons.daily} />
         <FrequencySection title="주간 루틴" routines={groupedByFrequency.weekly} icon={frequencyIcons.weekly} />
         <FrequencySection title="월간 루틴" routines={groupedByFrequency.monthly} icon={frequencyIcons.monthly} />
       </div>
