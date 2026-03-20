@@ -101,8 +101,8 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
 
   return (
     <div className="modal-backdrop bg-black/50 flex items-end justify-center">
-      <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md flex flex-col overflow-hidden">
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] flex flex-col overflow-hidden">
+        <div className="shrink-0 px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-[20px] font-bold text-gray-900 flex items-center gap-2">
             <Folder className="w-5 h-5 text-blue-600" />
             프로젝트 관리
@@ -115,7 +115,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 overscroll-contain">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4 overscroll-contain">
           {/* Add Project Button */}
           {!showAddForm && !editingProject && (
             <button
@@ -364,7 +364,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
         </div>
 
         {(showAddForm || editingProject) && (
-          <div className="border-t border-gray-100 bg-white/95 backdrop-blur px-6 pt-3 pb-[calc(12px+var(--safe-area-bottom))]">
+          <div className="shrink-0 sticky bottom-0 border-t border-gray-100 bg-white/95 backdrop-blur px-6 pt-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
             <div className="flex gap-2">
               <button
                 onClick={showAddForm ? handleAddProject : handleUpdateProject}
