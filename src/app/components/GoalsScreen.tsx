@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Goal, LinkedRoutine } from "../context/DataContext";
+import { ModalPortal } from "./common/ModalPortal";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
 
@@ -548,8 +549,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
       {/* Add Goal Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
             <div className="px-5 pt-4 pb-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-5">
@@ -661,14 +663,16 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Add Routine Modal */}
       {showAddRoutineModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
             <div className="px-5 pt-4 pb-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-5">
@@ -850,14 +854,16 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Edit Routine Modal */}
       {showEditRoutineModal && editingRoutineId && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
             <div className="px-5 pt-4 pb-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-5">
@@ -948,8 +954,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

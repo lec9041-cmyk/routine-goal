@@ -20,6 +20,7 @@ import {
   isRoutineCompleted,
 } from "../utils/routineProgress";
 import { toDateKey } from "../utils/dateUtils";
+import { ModalPortal } from "./common/ModalPortal";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
 
@@ -392,8 +393,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
       {/* Add Routine Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end justify-center">
-          <div className="bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
             <div className="px-5 pt-4 pb-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-5">
@@ -731,8 +733,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );

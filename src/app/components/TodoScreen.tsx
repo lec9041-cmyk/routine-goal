@@ -21,6 +21,7 @@ import {
 import { useData } from "../context/DataContext";
 import type { Todo, Project } from "../context/DataContext";
 import { ProjectManageModal } from "./ProjectManageModal";
+import { ModalPortal } from "./common/ModalPortal";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar' | 'ai';
 
@@ -585,8 +586,9 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
 
       {/* Add Todo Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl w-full max-w-md p-6 max-h-[85vh] overflow-y-auto">
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/50 flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[20px] font-bold text-gray-900">새 할일</h2>
               <button
@@ -819,14 +821,16 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                 추가하기
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Edit Todo Modal */}
       {showEditModal && editingTodo && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl w-full max-w-md p-6 max-h-[85vh] overflow-y-auto">
+        <ModalPortal>
+          <div className="modal-backdrop bg-black/50 flex items-end justify-center">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[20px] font-bold text-gray-900">할일 수정</h2>
               <button
@@ -928,8 +932,9 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                 수정하기
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* Project Manage Modal */}
