@@ -7,6 +7,9 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon,
   TrendingUp,
+  Clock,
+  Bell,
+  BellOff,
   Minus,
   X,
   Trash2,
@@ -50,6 +53,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     category: "건강",
     frequency: "daily" as const,
     targetCount: 1,
+    time: "",
+    notificationEnabled: false,
     timeOfDay: "anytime" as const,
     color: "from-blue-100 to-blue-200",
     repeatType: "forever" as const,
@@ -92,6 +97,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       streak: 0,
       bestStreak: 0,
       color: newRoutine.color,
+      time: newRoutine.time || undefined,
+      notificationEnabled: newRoutine.time ? newRoutine.notificationEnabled : false,
       timeOfDay: newRoutine.timeOfDay,
       repeatType: newRoutine.repeatType,
       startDate: newRoutine.startDate,
@@ -108,6 +115,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       category: "건강",
       frequency: "daily",
       targetCount: 1,
+      time: "",
+      notificationEnabled: false,
       timeOfDay: "anytime",
       color: "from-blue-100 to-blue-200",
       repeatType: "forever",
@@ -116,6 +125,18 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       scheduleType: "count",
       specificDays: [] as number[],
     });
+  };
+
+  const requestNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return false;
+    }
+
+    if (Notification.permission === "granted") {
+      return true;
+    }
+
+    return (await Notification.requestPermission()) === "granted";
   };
 
   const toggleRoutineComplete = (routine: Routine) => {
@@ -216,6 +237,18 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                       <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium">
                         {routine.category}
                       </span>
+                      {routine.time && (
+                        <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {routine.time}
+                        </span>
+                      )}
+                      {routine.time && routine.notificationEnabled && (
+                        <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                          <Bell className="w-3 h-3" />
+                          알림 ON
+                        </span>
+                      )}
                       <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium" title="하루 1회 체크 · 다시 누르면 취소">
                         하루 1회 체크 · 다시 누르면 취소
                       </span>
@@ -649,6 +682,51 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     />
                   </div>
                 )}
+
+                <div>
+                  <label className="text-[13px] font-medium text-gray-700 mb-2 block">알림 시간 (선택)</label>
+                  <input
+                    type="time"
+                    value={newRoutine.time}
+                    onChange={(e) =>
+                      setNewRoutine({
+                        ...newRoutine,
+                        time: e.target.value,
+                        notificationEnabled: e.target.value ? newRoutine.notificationEnabled : false,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[13px] font-medium text-gray-700 mb-2 block">알림</label>
+                  <button
+                    type="button"
+                    disabled={!newRoutine.time}
+                    onClick={async () => {
+                      if (!newRoutine.time) return;
+                      if (!newRoutine.notificationEnabled) {
+                        const granted = await requestNotificationPermission();
+                        if (!granted) return;
+                      }
+                      setNewRoutine({ ...newRoutine, notificationEnabled: !newRoutine.notificationEnabled });
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-xl border text-[13px] font-semibold flex items-center justify-center gap-2 transition-all ${
+                      !newRoutine.time
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : newRoutine.notificationEnabled
+                          ? "bg-amber-50 text-amber-700 border-amber-300"
+                          : "bg-gray-50 text-gray-600 border-gray-200"
+                    }`}
+                  >
+                    {newRoutine.notificationEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                    {newRoutine.notificationEnabled ? "알림 켜짐" : "알림 꺼짐 (기본)"}
+                  </button>
+                  {!newRoutine.time && (
+                    <p className="text-[11px] text-gray-400 mt-1">시간을 설정한 루틴만 알림을 켤 수 있어요.</p>
+                  )}
+                </div>
 
                 {/* Time of Day */}
                 <div>
