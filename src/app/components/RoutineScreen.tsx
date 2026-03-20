@@ -66,6 +66,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   });
 
   const [viewMode, setViewMode] = useState<"all" | "weekly" | "monthly">("all");
+  const contentContainerClass = "px-4";
   const today = new Date();
   const todayKey = toDateKey(today);
   const referenceDate = new Date(`${selectedDateKey}T00:00:00`);
@@ -256,12 +257,12 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
     return (
       <div className="mb-6">
-        <h3 className="text-[14px] font-semibold text-gray-700 mb-3 px-5 flex items-center gap-2">
+        <h3 className="text-[14px] font-semibold text-gray-700 mb-3 flex items-center gap-2">
           <span>{icon}</span>
           <span>{title}</span>
           <span className="text-[12px] text-gray-400 font-normal">({routines.length})</span>
         </h3>
-        <div className="space-y-2.5 px-5">
+        <div className="space-y-2.5">
           {routines.map((routine) => {
             const isCompleted = isRoutineCompleted(routine, referenceDate);
             const displayCount = getRoutineDisplayCount(routine, referenceDate);
@@ -271,7 +272,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             return (
               <div
                 key={routine.id}
-                className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3"
+                className="w-full box-border bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
@@ -404,7 +405,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       )}
 
       {/* Today's Progress */}
-      <div className="px-5 py-5">
+      <div className={`${contentContainerClass} py-5`}>
         <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3 mb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-gray-700">
