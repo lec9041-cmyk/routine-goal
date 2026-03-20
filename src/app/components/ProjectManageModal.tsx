@@ -18,6 +18,7 @@ const projectColors = [
   { name: "분홍", class: "bg-gradient-to-br from-pink-100 to-pink-200" },
   { name: "회색", class: "bg-gradient-to-br from-gray-100 to-gray-200" },
 ];
+const compactDateInputClass = "w-full max-w-[12.5rem] px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]";
 
 export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
   const { projects, addProject, updateProject, deleteProject, todos } = useData();
@@ -172,7 +173,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={newProject.startDate}
                   onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
               <div>
@@ -183,7 +184,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={newProject.endDate}
                   onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
             </div>
@@ -246,7 +247,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={editingProject.startDate || ""}
                   onChange={(e) => setEditingProject({ ...editingProject, startDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
               <div>
@@ -257,7 +258,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
                   type="date"
                   value={editingProject.endDate || ""}
                   onChange={(e) => setEditingProject({ ...editingProject, endDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[12px]"
+                  className={compactDateInputClass}
                 />
               </div>
             </div>

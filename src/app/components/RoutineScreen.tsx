@@ -89,6 +89,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     { name: "청록", value: "from-cyan-100 to-cyan-200", text: "text-cyan-600" },
     { name: "주황", value: "from-orange-100 to-orange-200", text: "text-orange-600" },
   ];
+  const compactDateTimeFieldClass = "w-full max-w-[13rem] px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent";
 
   const handleAddRoutine = () => {
     if (!newRoutine.title.trim()) return;
@@ -637,7 +638,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                         type="date"
                         value={newRoutine.startDate}
                         onChange={(e) => setNewRoutine({ ...newRoutine, startDate: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                        className={compactDateTimeFieldClass}
                       />
                     </div>
                     <div>
@@ -646,7 +647,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                         type="date"
                         value={newRoutine.endDate}
                         onChange={(e) => setNewRoutine({ ...newRoutine, endDate: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                        className={compactDateTimeFieldClass}
                       />
                     </div>
                   </div>
@@ -765,7 +766,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                         notificationEnabled: e.target.value ? newRoutine.notificationEnabled : false,
                       })
                     }
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                    className={compactDateTimeFieldClass}
                   />
                 </div>
 

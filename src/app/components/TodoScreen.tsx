@@ -93,6 +93,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
     low: "bg-blue-400",
   };
   const modalFieldClass = "w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[14px]";
+  const modalDateTimeFieldClass = "w-full max-w-[13rem] h-11 px-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[13px]";
   const modalChipClass = "min-h-10 px-4 rounded-xl text-[12px] font-medium transition-all";
 
   const toggleSubTask = (todoId: string, subTaskId: string) => {
@@ -890,7 +891,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                       })
                     }
                     onFocus={ensureFieldVisibleOnFocus}
-                    className={modalFieldClass}
+                    className={modalDateTimeFieldClass}
                   />
                 </div>
 
@@ -1064,7 +1065,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                       })
                     }
                     onFocus={ensureFieldVisibleOnFocus}
-                    className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[13px]"
+                    className={modalDateTimeFieldClass}
                   />
                 </div>
 
