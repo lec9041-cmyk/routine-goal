@@ -473,21 +473,30 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                       <div className="flex-1 text-left min-w-0">
                         {linkedGoal && (
                           <p
-                            className={`text-[11px] font-medium truncate mb-0.5 ${
+                            className={`text-[10.5px] leading-tight font-medium truncate mb-0.5 ${
                               isCompleted ? "text-gray-400" : "text-gray-500"
                             }`}
                           >
                             목표 · {linkedGoal.title}
                           </p>
                         )}
-                        <p
-                          className={`text-[13.5px] leading-snug font-medium ${
-                            isCompleted ? "text-gray-400 line-through" : "text-gray-900"
-                          }`}
-                        >
-                          {routine.icon} {routine.title}
-                        </p>
-                        <p className="text-[11px] text-gray-600 mt-1 flex items-center gap-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p
+                            className={`text-[13.5px] leading-snug font-medium min-w-0 truncate ${
+                              isCompleted ? "text-gray-400 line-through" : "text-gray-900"
+                            }`}
+                          >
+                            {routine.icon} {routine.title}
+                          </p>
+                          <span
+                            className={`text-[11px] leading-tight font-semibold flex-shrink-0 ${
+                              isCompleted ? "text-gray-400" : "text-gray-600"
+                            }`}
+                          >
+                            {displayCount}/{routine.targetCount}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5">
                           <span className="text-gray-500">
                             {routine.frequency === "daily"
                               ? "daily"
@@ -495,8 +504,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                               ? "weekly"
                               : "monthly"}
                           </span>
-                          <span className="text-gray-300">•</span>
-                          {displayCount} / {routine.targetCount}
                         </p>
                       </div>
                     </button>
