@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
+import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CircleDashed, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
 import { useData } from "../context/DataContext";
 import {
   getRoutineDisplayCount,
@@ -174,6 +174,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const renderRoutineListItem = (routine: (typeof selectedDateRoutines)[number], tone: "purple" | "indigo" = "purple") => {
     const displayCount = routine.completedCount;
     const isCompleted = routine.isCompleted;
+    const hasProgress = displayCount > 0;
+    const progressPercent = Math.min(100, Math.round((displayCount / routine.targetCount) * 100));
     const linkedGoal = routine.linkedGoalId
       ? goals.find((goal) => goal.id === routine.linkedGoalId)
       : null;
@@ -181,7 +183,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     return (
       <div
         key={routine.id}
-        className={`${itemCardClass} ${isCompleted ? "opacity-70" : ""}`}
+        className={`${itemCardClass} ${isCompleted ? "opacity-70" : ""} ${hasProgress && !isCompleted ? "ring-1 ring-indigo-200/70 bg-indigo-50/40" : ""}`}
       >
         <button
           onClick={() =>
@@ -191,6 +193,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
         >
           {isCompleted ? (
             <CheckCircle2 className={`w-4.5 h-4.5 flex-shrink-0 ${tone === "indigo" ? "text-indigo-500" : "text-purple-500"}`} />
+          ) : hasProgress ? (
+            <CircleDashed className={`w-4.5 h-4.5 flex-shrink-0 ${tone === "indigo" ? "text-indigo-400" : "text-purple-400"}`} />
           ) : (
             <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
           )}
@@ -214,12 +218,22 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               </p>
               <span
                 className={`text-[11px] leading-tight font-semibold flex-shrink-0 ${
-                  isCompleted ? "text-gray-400" : "text-gray-600"
+                  isCompleted ? "text-gray-400" : hasProgress ? "text-indigo-600" : "text-gray-600"
                 }`}
               >
                 {displayCount}/{routine.targetCount}
               </span>
             </div>
+            {routine.targetCount > 1 && (
+              <div className="mt-1.5">
+                <div className="w-full h-1.5 rounded-full bg-gray-200/70 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${tone === "indigo" ? "bg-indigo-500" : "bg-purple-500"}`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </button>
       </div>
