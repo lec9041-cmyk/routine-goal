@@ -360,7 +360,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   };
 
   return (
-    <div className="min-h-screen bg-transparent pb-24">
+    <div className="min-h-full bg-transparent">
       {/* Header */}
       {!hideHeader && (
         <div className="bg-white border-b border-gray-100 sticky top-0 z-10">

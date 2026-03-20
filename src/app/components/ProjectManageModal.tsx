@@ -163,7 +163,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block text-[12px] font-semibold text-gray-700 mb-1">
                   시작일
@@ -237,7 +237,7 @@ export function ProjectManageModal({ onClose }: ProjectManageModalProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block text-[12px] font-semibold text-gray-700 mb-1">
                   시작일
