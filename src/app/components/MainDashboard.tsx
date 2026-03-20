@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
+import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CircleDashed, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
 import { useData } from "../context/DataContext";
 import {
   getRoutineDisplayCount,
@@ -97,10 +97,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
   const weeklyDeferred = deferredRoutines.filter((routine) => routine.frequency === "weekly");
   const monthlyDeferred = deferredRoutines.filter((routine) => routine.frequency === "monthly");
-  const weeklyDeferredTotalTarget = weeklyDeferred.reduce((sum, routine) => sum + routine.targetCount, 0);
-  const weeklyDeferredCurrent = weeklyDeferred.reduce((sum, routine) => sum + routine.completedCount, 0);
-  const monthlyDeferredTotalTarget = monthlyDeferred.reduce((sum, routine) => sum + routine.targetCount, 0);
-  const monthlyDeferredCurrent = monthlyDeferred.reduce((sum, routine) => sum + routine.completedCount, 0);
 
   const handleQuickAdd = async () => {
     if (isQuickAdding) return;
@@ -173,6 +169,75 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const goToToday = () => {
     setWeekOffset(0);
     setSelectedDate(today);
+  };
+
+  const renderRoutineListItem = (routine: (typeof selectedDateRoutines)[number], tone: "purple" | "indigo" = "purple") => {
+    const displayCount = routine.completedCount;
+    const isCompleted = routine.isCompleted;
+    const hasProgress = displayCount > 0;
+    const progressPercent = Math.min(100, Math.round((displayCount / routine.targetCount) * 100));
+    const linkedGoal = routine.linkedGoalId
+      ? goals.find((goal) => goal.id === routine.linkedGoalId)
+      : null;
+
+    return (
+      <div
+        key={routine.id}
+        className={`${itemCardClass} ${isCompleted ? "opacity-70" : ""} ${hasProgress && !isCompleted ? "ring-1 ring-indigo-200/70 bg-indigo-50/40" : ""}`}
+      >
+        <button
+          onClick={() =>
+            toggleRoutineForDate(routine.id, toDateKey(selectedDate))
+          }
+          className="w-full flex items-center gap-2.5 p-2.5"
+        >
+          {isCompleted ? (
+            <CheckCircle2 className={`w-4.5 h-4.5 flex-shrink-0 ${tone === "indigo" ? "text-indigo-500" : "text-purple-500"}`} />
+          ) : hasProgress ? (
+            <CircleDashed className={`w-4.5 h-4.5 flex-shrink-0 ${tone === "indigo" ? "text-indigo-400" : "text-purple-400"}`} />
+          ) : (
+            <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
+          )}
+          <div className="flex-1 text-left min-w-0">
+            {linkedGoal && (
+              <p
+                className={`text-[10px] leading-tight font-medium truncate mb-0.5 ${
+                  isCompleted ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
+                {linkedGoal.title}
+              </p>
+            )}
+            <div className="flex items-start justify-between gap-2">
+              <p
+                className={`text-[13px] leading-snug font-medium min-w-0 truncate ${
+                  isCompleted ? "text-gray-400 line-through" : "text-gray-900"
+                }`}
+              >
+                {routine.icon} {routine.title}
+              </p>
+              <span
+                className={`text-[11px] leading-tight font-semibold flex-shrink-0 ${
+                  isCompleted ? "text-gray-400" : hasProgress ? "text-indigo-600" : "text-gray-600"
+                }`}
+              >
+                {displayCount}/{routine.targetCount}
+              </span>
+            </div>
+            {routine.targetCount > 1 && (
+              <div className="mt-1.5">
+                <div className="w-full h-1.5 rounded-full bg-gray-200/70 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${tone === "indigo" ? "bg-indigo-500" : "bg-purple-500"}`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -439,79 +504,15 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                   onClick={() => onNavigate("goals-routines")}
                   className="text-[11px] text-purple-700 font-semibold"
                 >
-                  주간/월간 관리
+                  루틴 관리
                 </button>
               </div>
 
-              {actionableRoutines.map((routine) => {
-                const displayCount = routine.completedCount;
-                const isCompleted = routine.isCompleted;
-                const linkedGoal = routine.linkedGoalId
-                  ? goals.find((goal) => goal.id === routine.linkedGoalId)
-                  : null;
-
-                return (
-                  <div
-                    key={routine.id}
-                    className={`${itemCardClass} ${
-                      isCompleted ? "opacity-70" : ""
-                    }`}
-                  >
-                    <button
-                      onClick={() =>
-                        toggleRoutineForDate(routine.id, toDateKey(selectedDate))
-                      }
-                      className="w-full flex items-center gap-2.5 p-3"
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-4.5 h-4.5 text-purple-500 flex-shrink-0" />
-                      ) : (
-                        <Circle className="w-4.5 h-4.5 text-gray-300 flex-shrink-0" />
-                      )}
-                      <div className="flex-1 text-left min-w-0">
-                        {linkedGoal && (
-                          <p
-                            className={`text-[10.5px] leading-tight font-medium truncate mb-0.5 ${
-                              isCompleted ? "text-gray-400" : "text-gray-500"
-                            }`}
-                          >
-                            목표 · {linkedGoal.title}
-                          </p>
-                        )}
-                        <div className="flex items-start justify-between gap-2">
-                          <p
-                            className={`text-[13.5px] leading-snug font-medium min-w-0 truncate ${
-                              isCompleted ? "text-gray-400 line-through" : "text-gray-900"
-                            }`}
-                          >
-                            {routine.icon} {routine.title}
-                          </p>
-                          <span
-                            className={`text-[11px] leading-tight font-semibold flex-shrink-0 ${
-                              isCompleted ? "text-gray-400" : "text-gray-600"
-                            }`}
-                          >
-                            {displayCount}/{routine.targetCount}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5">
-                          <span className="text-gray-500">
-                            {routine.frequency === "daily"
-                              ? "daily"
-                              : routine.frequency === "weekly"
-                              ? "weekly"
-                              : "monthly"}
-                          </span>
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
+              {actionableRoutines.map((routine) => renderRoutineListItem(routine))}
 
               {actionableRoutines.length === 0 && activeFilter === "routine" && (
-                <div className={`${itemCardClass} p-8 text-center`}>
-                  <Target className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <div className={`${itemCardClass} p-6 text-center`}>
+                  <Target className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-600 text-[13px]">오늘 할 루틴 없음</p>
                   <button
                     onClick={() => onNavigate("goals-routines")}
@@ -521,26 +522,35 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                   </button>
                 </div>
               )}
-            </>
-          )}
 
-          {activeFilter === "all" && (weeklyDeferred.length > 0 || monthlyDeferred.length > 0) && (
-            <div className="pt-1 space-y-1.5">
-              {weeklyDeferred.length > 0 && (
-                <div className={`${itemCardClass} px-3 py-2.5`}>
-                  <p className="text-[12px] text-gray-700">
-                    이번주 루틴 <span className="font-bold text-purple-700">{weeklyDeferredCurrent}/{weeklyDeferredTotalTarget}</span> 진행 중
-                  </p>
-                </div>
+              {activeFilter === "all" && (
+                <>
+                  <div className="flex items-center justify-between px-1 pt-2">
+                    <h3 className="text-[12px] font-bold text-gray-600">이번주 루틴</h3>
+                    <span className="text-[11px] font-semibold text-indigo-600">
+                      {weeklyDeferred.length}개
+                    </span>
+                  </div>
+                  {weeklyDeferred.length > 0 ? (
+                    weeklyDeferred.map((routine) => renderRoutineListItem(routine, "indigo"))
+                  ) : (
+                    <p className="px-1 text-[11px] text-gray-500">이번주 카운팅 루틴이 없습니다.</p>
+                  )}
+
+                  <div className="flex items-center justify-between px-1 pt-2">
+                    <h3 className="text-[12px] font-bold text-gray-600">이번달 루틴</h3>
+                    <span className="text-[11px] font-semibold text-indigo-600">
+                      {monthlyDeferred.length}개
+                    </span>
+                  </div>
+                  {monthlyDeferred.length > 0 ? (
+                    monthlyDeferred.map((routine) => renderRoutineListItem(routine, "indigo"))
+                  ) : (
+                    <p className="px-1 text-[11px] text-gray-500">이번달 카운팅 루틴이 없습니다.</p>
+                  )}
+                </>
               )}
-              {monthlyDeferred.length > 0 && (
-                <div className={`${itemCardClass} px-3 py-2.5`}>
-                  <p className="text-[12px] text-gray-700">
-                    이번달 루틴 <span className="font-bold text-purple-700">{monthlyDeferredCurrent}/{monthlyDeferredTotalTarget}</span> 진행 중
-                  </p>
-                </div>
-              )}
-            </div>
+            </>
           )}
 
           {activeFilter === "all" && totalItems === 0 && deferredRoutines.length === 0 && (
