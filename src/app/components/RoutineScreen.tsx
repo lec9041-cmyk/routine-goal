@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   Plus,
-  Flame,
-  Circle,
-  CheckCircle2,
   Calendar as CalendarIcon,
   TrendingUp,
+  Clock,
+  Bell,
+  BellOff,
   Minus,
   X,
   Trash2,
   Edit2,
+  Settings,
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Routine } from "../context/DataContext";
@@ -34,6 +35,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const { routines, addRoutine, deleteRoutine, toggleRoutineForDate } = useData();
   const allowPastDateEdit = false;
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showInlineQuickAdd, setShowInlineQuickAdd] = useState(false);
+  const [quickRoutineTitle, setQuickRoutineTitle] = useState("");
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [showRoutineMenu, setShowRoutineMenu] = useState<string | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
   
@@ -43,6 +47,13 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       setShowAddModal(true);
     }
   }, [shouldOpenAddModal]);
+
+  useEffect(() => {
+    if (!showInlineQuickAdd) {
+      setQuickRoutineTitle("");
+      setIsQuickAdding(false);
+    }
+  }, [showInlineQuickAdd]);
   
   const [newRoutine, setNewRoutine] = useState({
     title: "",
@@ -50,6 +61,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     category: "건강",
     frequency: "daily" as const,
     targetCount: 1,
+    time: "",
+    notificationEnabled: false,
     timeOfDay: "anytime" as const,
     color: "from-blue-100 to-blue-200",
     repeatType: "forever" as const,
@@ -59,7 +72,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     specificDays: [] as number[],
   });
 
-  const [viewMode, setViewMode] = useState<"all" | "daily" | "weekly" | "monthly">("all");
+  const [viewMode, setViewMode] = useState<"all" | "weekly" | "monthly">("all");
   const today = new Date();
   const todayKey = toDateKey(today);
   const referenceDate = new Date(`${selectedDateKey}T00:00:00`);
@@ -92,6 +105,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       streak: 0,
       bestStreak: 0,
       color: newRoutine.color,
+      time: newRoutine.time || undefined,
+      notificationEnabled: newRoutine.time ? newRoutine.notificationEnabled : false,
       timeOfDay: newRoutine.timeOfDay,
       repeatType: newRoutine.repeatType,
       startDate: newRoutine.startDate,
@@ -108,6 +123,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       category: "건강",
       frequency: "daily",
       targetCount: 1,
+      time: "",
+      notificationEnabled: false,
       timeOfDay: "anytime",
       color: "from-blue-100 to-blue-200",
       repeatType: "forever",
@@ -118,12 +135,93 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     });
   };
 
-  const toggleRoutineComplete = (routine: Routine) => {
-    if (isReadOnlyPastDate) return;
-    toggleRoutineForDate(routine.id, allowPastDateEdit ? selectedDateKey : todayKey);
+  const handleQuickAddRoutine = () => {
+    if (isQuickAdding) return;
+    const title = quickRoutineTitle.trim();
+    if (!title) {
+      setShowInlineQuickAdd(false);
+      return;
+    }
+
+    setIsQuickAdding(true);
+    try {
+      addRoutine({
+        id: Date.now().toString(),
+        title,
+        icon: "⭐",
+        category: "건강",
+        frequency: "daily",
+        targetCount: 1,
+        currentCount: 0,
+        trackingType: "count",
+        color: "from-blue-100 to-blue-200",
+        completedDates: [],
+      });
+      setShowInlineQuickAdd(false);
+    } finally {
+      setIsQuickAdding(false);
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return false;
+    }
+
+    if (Notification.permission === "granted") {
+      return true;
+    }
+
+    return (await Notification.requestPermission()) === "granted";
+  };
+
+  const getPeriodDateKeys = (routine: Routine, reference: Date) => {
+    const keys: string[] = [];
+
+    if (routine.frequency === "weekly") {
+      const start = new Date(reference);
+      start.setDate(reference.getDate() - reference.getDay());
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        keys.push(toDateKey(date));
+      }
+      return keys;
+    }
+
+    if (routine.frequency === "monthly") {
+      const year = reference.getFullYear();
+      const month = reference.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        keys.push(toDateKey(new Date(year, month, day)));
+      }
+      return keys;
+    }
+
+    return [toDateKey(reference)];
+  };
+
+  const incrementPeriodRoutine = (routine: Routine) => {
+    const candidateDate = getPeriodDateKeys(routine, referenceDate)
+      .find((dateKey) => !routine.completedDates?.includes(dateKey));
+
+    if (!candidateDate) return;
+    toggleRoutineForDate(routine.id, candidateDate);
+  };
+
+  const decrementPeriodRoutine = (routine: Routine) => {
+    const keysInPeriod = getPeriodDateKeys(routine, referenceDate);
+    const completedInPeriod = (routine.completedDates || [])
+      .filter((dateKey) => keysInPeriod.includes(dateKey))
+      .sort((a, b) => b.localeCompare(a));
+
+    if (completedInPeriod.length === 0) return;
+    toggleRoutineForDate(routine.id, completedInPeriod[0]);
   };
 
   const filteredRoutines = routines.filter((routine) => {
+    if (routine.frequency === "daily") return false;
     if (viewMode === "all") return true;
     return routine.frequency === viewMode;
   });
@@ -138,20 +236,12 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
   const completionRate = getTotalProgress(filteredRoutines);
 
-  const frequencyLabels = {
-    daily: "일일",
-    weekly: "주간",
-    monthly: "월간",
-  };
-
   const frequencyIcons = {
-    daily: "📅",
     weekly: "📆",
     monthly: "🗓️",
   };
 
   const groupedByFrequency = {
-    daily: filteredRoutines.filter((r) => r.frequency === "daily"),
     weekly: filteredRoutines.filter((r) => r.frequency === "weekly"),
     monthly: filteredRoutines.filter((r) => r.frequency === "monthly"),
   };
@@ -172,9 +262,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             const displayCount = getRoutineDisplayCount(routine, referenceDate);
             const periodCount = getRoutineCountForPeriod(routine, referenceDate);
             const progressPercentage = (periodCount / routine.targetCount) * 100;
-            const statusText = isCompleted
-              ? "체크됨, 다시 누르면 취소"
-              : "미체크, 누르면 완료 처리";
 
             return (
               <div
@@ -182,32 +269,10 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 shadow-sm p-3"
               >
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => toggleRoutineComplete(routine)}
-                    className={`flex-shrink-0 transition-transform ${
-                      isReadOnlyPastDate ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
-                    }`}
-                    aria-label={`${routine.title} ${statusText}`}
-                    title={isReadOnlyPastDate ? "과거 날짜는 읽기 전용입니다." : "하루 1회 체크 · 다시 누르면 취소"}
-                    disabled={isReadOnlyPastDate}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-blue-500" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-gray-300" />
-                    )}
-                  </button>
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[16px]">{routine.icon}</span>
-                      <h4
-                        className={`text-[14px] font-semibold ${
-                          isCompleted
-                            ? "text-gray-400 line-through"
-                            : "text-gray-900"
-                        }`}
-                      >
+                      <h4 className="text-[14px] font-semibold text-gray-900">
                         {routine.title}
                       </h4>
                     </div>
@@ -216,8 +281,20 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                       <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium">
                         {routine.category}
                       </span>
-                      <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium" title="하루 1회 체크 · 다시 누르면 취소">
-                        하루 1회 체크 · 다시 누르면 취소
+                      {routine.time && (
+                        <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {routine.time}
+                        </span>
+                      )}
+                      {routine.time && routine.notificationEnabled && (
+                        <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                          <Bell className="w-3 h-3" />
+                          알림 ON
+                        </span>
+                      )}
+                      <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium">
+                        {routine.frequency === "weekly" ? "이번주 카운트" : "이번달 카운트"}
                       </span>
                     </div>
 
@@ -232,21 +309,30 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[11px] text-gray-600 font-bold">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => decrementPeriodRoutine(routine)}
+                          disabled={isReadOnlyPastDate || displayCount === 0}
+                          className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                          aria-label={`${routine.title} 카운트 감소`}
+                        >
+                          <Minus className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
+                        <span className="text-[12px] font-bold text-gray-700 min-w-[58px] text-center">
                           {displayCount}/{routine.targetCount}
                         </span>
-                        <span className="text-[10px] text-gray-400">
-                          하루 1회 체크, 다시 누르면 취소
-                        </span>
+                        <button
+                          onClick={() => incrementPeriodRoutine(routine)}
+                          disabled={isReadOnlyPastDate || displayCount >= routine.targetCount}
+                          className="w-7 h-7 rounded-lg bg-purple-100 hover:bg-purple-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                          aria-label={`${routine.title} 카운트 증가`}
+                        >
+                          <Plus className="w-3.5 h-3.5 text-purple-700" />
+                        </button>
                       </div>
-                      {/* Streak Info */}
-                      <div className="flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5 text-orange-400" />
-                        <p className="text-[11px] font-bold text-orange-500">
-                          {routine.streak}일
-                        </p>
-                      </div>
+                      <span className={`text-[11px] font-semibold ${isCompleted ? "text-green-600" : "text-gray-500"}`}>
+                        {isCompleted ? "목표 달성" : "진행 중"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -286,16 +372,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 }`}
               >
                 전체
-              </button>
-              <button
-                onClick={() => setViewMode("daily")}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-                  viewMode === "daily"
-                    ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-150"
-                }`}
-              >
-                📅 일일
               </button>
               <button
                 onClick={() => setViewMode("weekly")}
@@ -354,7 +430,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             <div>
               <p className="text-purple-600 text-[12px] mb-1 font-medium">
                 {viewMode === "all" && "전체 루틴"}
-                {viewMode === "daily" && (isSelectedDateToday ? "오늘의 루틴" : "선택한 날짜 루틴")}
                 {viewMode === "weekly" && (isSelectedDateToday ? "이번 주 루틴" : "선택한 날짜 기준 주간 루틴")}
                 {viewMode === "monthly" && (isSelectedDateToday ? "이번 달 루틴" : "선택한 날짜 기준 월간 루틴")}
               </p>
@@ -373,32 +448,59 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             />
           </div>
           <p className="text-purple-700 text-[12px]">
-            {completionRate > 0 ? "좋아요! 계속해서 루틴을 완성해보세요 💪" : "오늘의 루틴을 시작해보세요!"}
+            {completionRate > 0 ? "좋아요! 횟수를 채워가며 루틴을 관리해보세요 💪" : "주간/월간 루틴 카운트를 시작해보세요!"}
           </p>
         </div>
 
         {/* Routines by Frequency */}
-        <FrequencySection title="일일 루틴" routines={groupedByFrequency.daily} icon={frequencyIcons.daily} />
         <FrequencySection title="주간 루틴" routines={groupedByFrequency.weekly} icon={frequencyIcons.weekly} />
         <FrequencySection title="월간 루틴" routines={groupedByFrequency.monthly} icon={frequencyIcons.monthly} />
       </div>
 
       {/* Floating Add Button */}
       <button 
-        onClick={() => setShowAddModal(true)}
+        onClick={() => setShowInlineQuickAdd(true)}
         className="fixed bottom-[calc(var(--app-bottom-space)+12px)] right-4 sm:right-6 w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105"
       >
         <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
       </button>
 
+      {showInlineQuickAdd && (
+        <div className="fixed bottom-[calc(var(--app-bottom-space)+92px)] left-4 right-4 z-40 sm:left-auto sm:right-6 sm:w-[420px]">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/80 shadow-sm p-3">
+            <p className="text-[11px] text-gray-600 mb-2">빠른 루틴 입력 (기본: 일일/건강/목표 1회)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={quickRoutineTitle}
+                onChange={(e) => setQuickRoutineTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleQuickAddRoutine()}
+                onBlur={handleQuickAddRoutine}
+                placeholder="루틴을 입력하세요..."
+                autoFocus
+                className="flex-1 h-10 px-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:outline-none text-[14px]"
+              />
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowAddModal(true)}
+                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
+                title="상세 설정"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Routine Modal */}
       {showAddModal && (
         <ModalPortal>
           <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
-            <div className="px-5 pt-4 pb-6">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] shadow-2xl animate-slide-up flex flex-col overflow-hidden">
+            <div className="shrink-0 px-5 pt-4 pb-4 border-b border-gray-100">
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">새 루틴 추가</h2>
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -407,8 +509,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                   <X className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
+            </div>
 
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pb-4">
+              <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-5 py-4 overscroll-contain">
                 {/* Icon Selection */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">아이콘</label>
@@ -650,6 +753,51 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                   </div>
                 )}
 
+                <div>
+                  <label className="text-[13px] font-medium text-gray-700 mb-2 block">알림 시간 (선택)</label>
+                  <input
+                    type="time"
+                    value={newRoutine.time}
+                    onChange={(e) =>
+                      setNewRoutine({
+                        ...newRoutine,
+                        time: e.target.value,
+                        notificationEnabled: e.target.value ? newRoutine.notificationEnabled : false,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[13px] font-medium text-gray-700 mb-2 block">알림</label>
+                  <button
+                    type="button"
+                    disabled={!newRoutine.time}
+                    onClick={async () => {
+                      if (!newRoutine.time) return;
+                      if (!newRoutine.notificationEnabled) {
+                        const granted = await requestNotificationPermission();
+                        if (!granted) return;
+                      }
+                      setNewRoutine({ ...newRoutine, notificationEnabled: !newRoutine.notificationEnabled });
+                    }}
+                    className={`w-full px-4 py-2.5 rounded-xl border text-[13px] font-semibold flex items-center justify-center gap-2 transition-all ${
+                      !newRoutine.time
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : newRoutine.notificationEnabled
+                          ? "bg-amber-50 text-amber-700 border-amber-300"
+                          : "bg-gray-50 text-gray-600 border-gray-200"
+                    }`}
+                  >
+                    {newRoutine.notificationEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                    {newRoutine.notificationEnabled ? "알림 켜짐" : "알림 꺼짐 (기본)"}
+                  </button>
+                  {!newRoutine.time && (
+                    <p className="text-[11px] text-gray-400 mt-1">시간을 설정한 루틴만 알림을 켤 수 있어요.</p>
+                  )}
+                </div>
+
                 {/* Time of Day */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">시간대</label>
@@ -717,7 +865,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 mt-5">
+              <div className="shrink-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-medium text-[14px] hover:bg-gray-200 transition-colors"
@@ -732,7 +881,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                   추가하기
                 </button>
               </div>
-            </div>
+              </div>
             </div>
           </div>
         </ModalPortal>

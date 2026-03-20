@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu } from "lucide-react";
+import { CheckSquare, Target, Calendar as CalendarIcon, Circle, CheckCircle2, Plus, X, ChevronRight, ChevronLeft, Menu, Settings } from "lucide-react";
 import { useData } from "../context/DataContext";
-import { ModalPortal } from "./common/ModalPortal";
 import {
   getRoutineDisplayCount,
   isRoutineCompleted,
 } from "../utils/routineProgress";
-import { formatDateString, isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
+import { isSameDay, matchesDueDate, toDateKey } from "../utils/dateUtils";
 
 type ScreenId = 'home' | 'todos' | 'goals-routines' | 'calendar';
 
@@ -30,10 +29,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     if (!showQuickAdd) {
       setQuickAddError("");
       setIsQuickAdding(false);
+      setQuickAddText("");
     }
   }, [showQuickAdd]);
-
-  const selectedDateString = formatDateString(selectedDate);
 
   // 선택한 날짜의 할일 (완료/미완료 모두 포함)
   const selectedDateTodos = todos.filter((todo) => matchesDueDate(todo.dueDate, selectedDate, today));
@@ -51,6 +49,22 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
       isCompleted,
     };
   });
+
+  const selectedDayOfWeek = selectedDate.getDay();
+  const actionableRoutines = selectedDateRoutines.filter((routine) => {
+    if (routine.frequency === "daily") {
+      return true;
+    }
+
+    return routine.frequency === "weekly"
+      && routine.scheduleType === "specific"
+      && Boolean(routine.specificDays?.includes(selectedDayOfWeek));
+  });
+
+  const deferredRoutines = selectedDateRoutines.filter((routine) =>
+    (routine.frequency === "weekly" || routine.frequency === "monthly")
+    && routine.scheduleType !== "specific"
+  );
 
   // 선택한 날짜가 오늘인지 확인
   const isSelectedToday = isSameDay(selectedDate, today);
@@ -72,8 +86,8 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   // 진행률 계산 (선택 날짜 기준 할일 + 루틴 통합)
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
-  const totalRoutines = selectedDateRoutines.length;
-  const completedRoutinesCount = selectedDateRoutines.filter((routine) => routine.isCompleted).length;
+  const totalRoutines = actionableRoutines.length;
+  const completedRoutinesCount = actionableRoutines.filter((routine) => routine.isCompleted).length;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -81,10 +95,18 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     ? "오늘 진행률"
     : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 진행률`;
 
+  const weeklyDeferred = deferredRoutines.filter((routine) => routine.frequency === "weekly");
+  const monthlyDeferred = deferredRoutines.filter((routine) => routine.frequency === "monthly");
+  const weeklyDeferredTotalTarget = weeklyDeferred.reduce((sum, routine) => sum + routine.targetCount, 0);
+  const weeklyDeferredCurrent = weeklyDeferred.reduce((sum, routine) => sum + routine.completedCount, 0);
+  const monthlyDeferredTotalTarget = monthlyDeferred.reduce((sum, routine) => sum + routine.targetCount, 0);
+  const monthlyDeferredCurrent = monthlyDeferred.reduce((sum, routine) => sum + routine.completedCount, 0);
+
   const handleQuickAdd = async () => {
     if (isQuickAdding) return;
-    if (!quickAddText.trim()) {
-      setQuickAddError("할일 제목은 필수입니다.");
+    const trimmedTitle = quickAddText.trim();
+    if (!trimmedTitle) {
+      setShowQuickAdd(false);
       return;
     }
     
@@ -93,14 +115,13 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     try {
       addTodo({
         id: Date.now().toString(),
-        title: quickAddText,
-        category: "개인",
+        title: trimmedTitle,
+        category: "업무",
         completed: false,
         priority: "medium",
-        dueDate: selectedDateString, // 선택한 날짜로 할일 추가
+        dueDate: "오늘",
+        projectId: "",
       });
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      setQuickAddText("");
       setShowQuickAdd(false);
     } finally {
       setIsQuickAdding(false);
@@ -413,16 +434,16 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           {(activeFilter === "all" || activeFilter === "routine") && (
             <>
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[12px] font-bold text-gray-600">루틴</h3>
+                <h3 className="text-[12px] font-bold text-gray-600">오늘 루틴</h3>
                 <button
                   onClick={() => onNavigate("goals-routines")}
                   className="text-[11px] text-purple-700 font-semibold"
                 >
-                  전체 보기
+                  주간/월간 관리
                 </button>
               </div>
 
-              {selectedDateRoutines.map((routine) => {
+              {actionableRoutines.map((routine) => {
                 const displayCount = routine.completedCount;
                 const isCompleted = routine.isCompleted;
                 const linkedGoal = routine.linkedGoalId
@@ -481,10 +502,10 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 );
               })}
 
-              {selectedDateRoutines.length === 0 && activeFilter === "routine" && (
+              {actionableRoutines.length === 0 && activeFilter === "routine" && (
                 <div className={`${itemCardClass} p-8 text-center`}>
                   <Target className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-600 text-[13px]">루틴 없음</p>
+                  <p className="text-gray-600 text-[13px]">오늘 할 루틴 없음</p>
                   <button
                     onClick={() => onNavigate("goals-routines")}
                     className="mt-3 text-purple-700 text-[13px] font-semibold"
@@ -496,7 +517,26 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             </>
           )}
 
-          {activeFilter === "all" && totalItems === 0 && (
+          {activeFilter === "all" && (weeklyDeferred.length > 0 || monthlyDeferred.length > 0) && (
+            <div className="pt-1 space-y-1.5">
+              {weeklyDeferred.length > 0 && (
+                <div className={`${itemCardClass} px-3 py-2.5`}>
+                  <p className="text-[12px] text-gray-700">
+                    이번주 루틴 <span className="font-bold text-purple-700">{weeklyDeferredCurrent}/{weeklyDeferredTotalTarget}</span> 진행 중
+                  </p>
+                </div>
+              )}
+              {monthlyDeferred.length > 0 && (
+                <div className={`${itemCardClass} px-3 py-2.5`}>
+                  <p className="text-[12px] text-gray-700">
+                    이번달 루틴 <span className="font-bold text-purple-700">{monthlyDeferredCurrent}/{monthlyDeferredTotalTarget}</span> 진행 중
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeFilter === "all" && totalItems === 0 && deferredRoutines.length === 0 && (
             <div className={`${itemCardClass} p-8 text-center`}>
               <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-600 text-[13px]">항목 없음</p>
@@ -514,53 +554,38 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
         <Plus className="w-7 h-7" />
       </button>
 
-      {/* Quick Add Modal */}
+      {/* Quick Add Inline */}
       {showQuickAdd && (
-        <ModalPortal>
-        <div className="modal-backdrop bg-black/50 flex items-end justify-center">
-          <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(78dvh,520px)] pb-0 animate-slide-up flex flex-col overflow-hidden">
-            <div className="shrink-0 px-5 pt-4 pb-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-[18px] font-bold text-gray-900">할일 추가</h2>
+        <div className="fixed bottom-[calc(var(--app-bottom-space)+92px)] left-4 right-4 z-40 sm:left-auto sm:right-6 sm:w-[420px]">
+          <div className={`${surfaceCardClass} p-3`}>
+            <p className="text-[11px] text-gray-600 mb-2">빠른 할일 입력 (기본: 오늘/기본 카테고리/프로젝트 없음)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={quickAddText}
+                onChange={(e) => {
+                  setQuickAddText(e.target.value);
+                  if (quickAddError) setQuickAddError("");
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+                onBlur={handleQuickAdd}
+                placeholder="할일을 입력하세요..."
+                autoFocus
+                aria-invalid={Boolean(quickAddError)}
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none text-[14px]"
+              />
               <button
-                onClick={() => setShowQuickAdd(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onNavigate("todos", { openAddModal: true })}
+                className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center"
+                title="상세 설정"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <Settings className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 overscroll-contain">
-            <p className="text-[12px] text-gray-600 mb-3">
-              {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일에 추가됩니다
-            </p>
-            <input
-              type="text"
-              value={quickAddText}
-              onChange={(e) => {
-                setQuickAddText(e.target.value);
-                if (quickAddError) setQuickAddError("");
-              }}
-              onKeyPress={(e) => e.key === 'Enter' && handleQuickAdd()}
-              placeholder="할일을 입력하세요..."
-              autoFocus
-              aria-invalid={Boolean(quickAddError)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[15px] mb-4"
-            />
-            {quickAddError && (
-              <p className="mt-[-8px] mb-4 text-[12px] text-red-500">{quickAddError}</p>
-            )}
-            </div>
-            <div className="shrink-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
-            <button
-              onClick={handleQuickAdd}
-              disabled={!quickAddText.trim() || isQuickAdding}
-              className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-              {isQuickAdding ? "추가 중..." : "추가하기"}
-            </button>
+            {quickAddError && <p className="text-[11px] text-red-500 mt-1">{quickAddError}</p>}
             </div>
           </div>
-        </div>
-        </ModalPortal>
       )}
 
       {/* Menu Modal */}

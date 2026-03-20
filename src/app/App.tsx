@@ -5,6 +5,7 @@ import { GoalRoutineScreen } from "./components/GoalRoutineScreen";
 import { CalendarScreen } from "./components/CalendarScreen";
 import { BottomTabBar } from "./components/BottomTabBar";
 import { DataProvider } from "./context/DataContext";
+import { ReminderManager } from "./components/ReminderManager";
 
 type ScreenId = "home" | "todos" | "goals-routines" | "calendar";
 
@@ -46,6 +47,7 @@ export default function App() {
 
   return (
     <DataProvider>
+      <ReminderManager />
       <div className="app-shell bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <main className="app-scroll">{renderScreen()}</main>
         <BottomTabBar currentScreen={currentScreen} onNavigate={handleNavigate} />
