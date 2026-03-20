@@ -39,6 +39,9 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
   const [newSubTaskId, setNewSubTaskId] = useState<string | null>(null);
   const [newSubTaskText, setNewSubTaskText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showInlineQuickAdd, setShowInlineQuickAdd] = useState(false);
+  const [quickTodoTitle, setQuickTodoTitle] = useState("");
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCategoryInput, setShowCategoryInput] = useState(false);
@@ -76,6 +79,13 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       setIsAddingTodo(false);
     }
   }, [showAddModal]);
+
+  useEffect(() => {
+    if (!showInlineQuickAdd) {
+      setQuickTodoTitle("");
+      setIsQuickAdding(false);
+    }
+  }, [showInlineQuickAdd]);
 
   const priorityColors = {
     high: "bg-red-400",
@@ -139,6 +149,31 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       setShowAddModal(false);
     } finally {
       setIsAddingTodo(false);
+    }
+  };
+
+  const handleQuickAddTodo = async () => {
+    if (isQuickAdding) return;
+    const title = quickTodoTitle.trim();
+    if (!title) {
+      setShowInlineQuickAdd(false);
+      return;
+    }
+
+    setIsQuickAdding(true);
+    try {
+      addTodo({
+        id: Date.now().toString(),
+        title,
+        category: "업무",
+        completed: false,
+        priority: "medium",
+        dueDate: "오늘",
+        projectId: "",
+      });
+      setShowInlineQuickAdd(false);
+    } finally {
+      setIsQuickAdding(false);
     }
   };
 
@@ -606,11 +641,39 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
 
       {/* FAB */}
       <button
-        onClick={() => setShowAddModal(true)}
+        onClick={() => setShowInlineQuickAdd(true)}
         className="fixed bottom-[calc(var(--app-bottom-space)+12px)] right-4 sm:right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center z-40"
       >
         <Plus className="w-7 h-7" />
       </button>
+
+      {showInlineQuickAdd && (
+        <div className="fixed bottom-[calc(var(--app-bottom-space)+92px)] left-4 right-4 z-40 sm:left-auto sm:right-6 sm:w-[420px]">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/80 shadow-sm p-3">
+            <p className="text-[11px] text-gray-600 mb-2">빠른 할일 입력 (기본: 오늘/업무/프로젝트 없음)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={quickTodoTitle}
+                onChange={(e) => setQuickTodoTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleQuickAddTodo()}
+                onBlur={handleQuickAddTodo}
+                placeholder="할일을 입력하세요..."
+                autoFocus
+                className="flex-1 h-10 px-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none text-[14px]"
+              />
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowAddModal(true)}
+                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
+                title="상세 설정"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete All Confirmation Modal */}
       {showDeleteAllConfirm && (

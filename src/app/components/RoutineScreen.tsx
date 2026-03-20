@@ -11,6 +11,7 @@ import {
   X,
   Trash2,
   Edit2,
+  Settings,
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Routine } from "../context/DataContext";
@@ -34,6 +35,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const { routines, addRoutine, deleteRoutine, toggleRoutineForDate } = useData();
   const allowPastDateEdit = false;
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showInlineQuickAdd, setShowInlineQuickAdd] = useState(false);
+  const [quickRoutineTitle, setQuickRoutineTitle] = useState("");
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [showRoutineMenu, setShowRoutineMenu] = useState<string | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
   
@@ -43,6 +47,13 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       setShowAddModal(true);
     }
   }, [shouldOpenAddModal]);
+
+  useEffect(() => {
+    if (!showInlineQuickAdd) {
+      setQuickRoutineTitle("");
+      setIsQuickAdding(false);
+    }
+  }, [showInlineQuickAdd]);
   
   const [newRoutine, setNewRoutine] = useState({
     title: "",
@@ -122,6 +133,34 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       scheduleType: "count",
       specificDays: [] as number[],
     });
+  };
+
+  const handleQuickAddRoutine = () => {
+    if (isQuickAdding) return;
+    const title = quickRoutineTitle.trim();
+    if (!title) {
+      setShowInlineQuickAdd(false);
+      return;
+    }
+
+    setIsQuickAdding(true);
+    try {
+      addRoutine({
+        id: Date.now().toString(),
+        title,
+        icon: "⭐",
+        category: "건강",
+        frequency: "daily",
+        targetCount: 1,
+        currentCount: 0,
+        trackingType: "count",
+        color: "from-blue-100 to-blue-200",
+        completedDates: [],
+      });
+      setShowInlineQuickAdd(false);
+    } finally {
+      setIsQuickAdding(false);
+    }
   };
 
   const requestNotificationPermission = async () => {
@@ -420,20 +459,48 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
       {/* Floating Add Button */}
       <button 
-        onClick={() => setShowAddModal(true)}
+        onClick={() => setShowInlineQuickAdd(true)}
         className="fixed bottom-[calc(var(--app-bottom-space)+12px)] right-4 sm:right-6 w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 shadow-lg hover:shadow-xl transition-all flex items-center justify-center hover:scale-105"
       >
         <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
       </button>
 
+      {showInlineQuickAdd && (
+        <div className="fixed bottom-[calc(var(--app-bottom-space)+92px)] left-4 right-4 z-40 sm:left-auto sm:right-6 sm:w-[420px]">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/80 shadow-sm p-3">
+            <p className="text-[11px] text-gray-600 mb-2">빠른 루틴 입력 (기본: 일일/건강/목표 1회)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={quickRoutineTitle}
+                onChange={(e) => setQuickRoutineTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleQuickAddRoutine()}
+                onBlur={handleQuickAddRoutine}
+                placeholder="루틴을 입력하세요..."
+                autoFocus
+                className="flex-1 h-10 px-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:outline-none text-[14px]"
+              />
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setShowAddModal(true)}
+                className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600"
+                title="상세 설정"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Routine Modal */}
       {showAddModal && (
         <ModalPortal>
           <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
-            <div className="px-5 pt-4 pb-6">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] shadow-2xl animate-slide-up flex flex-col overflow-hidden">
+            <div className="shrink-0 px-5 pt-4 pb-4 border-b border-gray-100">
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">새 루틴 추가</h2>
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -442,8 +509,9 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                   <X className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
+            </div>
 
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto pb-4">
+              <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-5 py-4 overscroll-contain">
                 {/* Icon Selection */}
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">아이콘</label>
@@ -797,7 +865,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 mt-5">
+              <div className="shrink-0 border-t border-gray-100 bg-white/95 backdrop-blur px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-medium text-[14px] hover:bg-gray-200 transition-colors"
@@ -812,7 +881,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                   추가하기
                 </button>
               </div>
-            </div>
+              </div>
             </div>
           </div>
         </ModalPortal>
