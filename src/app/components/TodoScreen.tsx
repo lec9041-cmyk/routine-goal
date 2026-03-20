@@ -553,7 +553,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       {/* FAB */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center z-40"
+        className="fixed bottom-[calc(var(--app-bottom-space)+12px)] right-4 sm:right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center z-40"
       >
         <Plus className="w-7 h-7" />
       </button>
