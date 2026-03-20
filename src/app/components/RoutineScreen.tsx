@@ -53,6 +53,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     icon: "⭐",
     category: "건강",
     frequency: "daily" as const,
+    trackingType: "count" as const,
     targetCount: 1,
     time: "",
     notificationEnabled: false,
@@ -95,6 +96,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       icon: newRoutine.icon,
       category: newRoutine.category,
       frequency: newRoutine.frequency,
+      trackingType: newRoutine.trackingType,
       targetCount: newRoutine.targetCount,
       currentCount: 0,
       completedDates: [],
@@ -118,6 +120,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       icon: "⭐",
       category: "건강",
       frequency: "daily",
+      trackingType: "count",
       targetCount: 1,
       time: "",
       notificationEnabled: false,
@@ -228,7 +231,6 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   };
 
   const filteredRoutines = routines.filter((routine) => {
-    if (routine.frequency === "daily") return false;
     if (viewMode === "all") return true;
     return routine.frequency === viewMode;
   });
@@ -244,11 +246,13 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const completionRate = getTotalProgress(filteredRoutines);
 
   const frequencyIcons = {
+    daily: "📅",
     weekly: "📆",
     monthly: "🗓️",
   };
 
   const groupedByFrequency = {
+    daily: filteredRoutines.filter((r) => r.frequency === "daily"),
     weekly: filteredRoutines.filter((r) => r.frequency === "weekly"),
     monthly: filteredRoutines.filter((r) => r.frequency === "monthly"),
   };
@@ -301,7 +305,11 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                         </span>
                       )}
                       <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-medium">
-                        {routine.frequency === "weekly" ? "이번주 카운트" : "이번달 카운트"}
+                        {routine.frequency === "daily"
+                          ? "오늘 카운트"
+                          : routine.frequency === "weekly"
+                            ? "이번주 카운트"
+                            : "이번달 카운트"}
                       </span>
                     </div>
 
@@ -381,6 +389,16 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 전체
               </button>
               <button
+                onClick={() => setViewMode("daily")}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${
+                  viewMode === "daily"
+                    ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-150"
+                }`}
+              >
+                📅 일일
+              </button>
+              <button
                 onClick={() => setViewMode("weekly")}
                 className={`flex-shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium transition-all ${
                   viewMode === "weekly"
@@ -437,6 +455,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             <div>
               <p className="text-purple-600 text-[12px] mb-1 font-medium">
                 {viewMode === "all" && "전체 루틴"}
+                {viewMode === "daily" && (isSelectedDateToday ? "오늘 루틴" : "선택한 날짜의 일일 루틴")}
                 {viewMode === "weekly" && (isSelectedDateToday ? "이번 주 루틴" : "선택한 날짜 기준 주간 루틴")}
                 {viewMode === "monthly" && (isSelectedDateToday ? "이번 달 루틴" : "선택한 날짜 기준 월간 루틴")}
               </p>
@@ -497,6 +516,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
         </div>
 
         {/* Routines by Frequency */}
+        <FrequencySection title="일일 루틴" routines={groupedByFrequency.daily} icon={frequencyIcons.daily} />
         <FrequencySection title="주간 루틴" routines={groupedByFrequency.weekly} icon={frequencyIcons.weekly} />
         <FrequencySection title="월간 루틴" routines={groupedByFrequency.monthly} icon={frequencyIcons.monthly} />
       </div>
