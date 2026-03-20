@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FocusEvent } from "react";
 import {
   Plus,
   ChevronLeft,
@@ -165,6 +165,13 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
     addTodoCategory(newCategoryName);
     setNewCategoryName("");
     setShowCategoryInput(false);
+  };
+
+  const ensureFieldVisibleOnFocus = (event: FocusEvent<HTMLInputElement>) => {
+    const target = event.currentTarget;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
   };
 
   const filteredTodos = todos.filter((todo) => {
@@ -588,8 +595,8 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       {showAddModal && (
         <ModalPortal>
           <div className="modal-backdrop bg-black/50 flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md p-6 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md flex flex-col overflow-hidden">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-[20px] font-bold text-gray-900">새 할일</h2>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -599,7 +606,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 overscroll-contain">
               <div>
                 <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                   할일
@@ -608,6 +615,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   type="text"
                   value={newTodo.title}
                   onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
+                  onFocus={ensureFieldVisibleOnFocus}
                   placeholder="할일을 입력하세요"
                   className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[14px]"
                 />
@@ -639,6 +647,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                               type="text"
                               value={editingCategoryName}
                               onChange={(e) => setEditingCategoryName(e.target.value)}
+                              onFocus={ensureFieldVisibleOnFocus}
                               className="flex-1 px-2 py-1 text-[12px] rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500"
                               autoFocus
                             />
@@ -714,6 +723,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+                        onFocus={ensureFieldVisibleOnFocus}
                         placeholder="카테고리명"
                         autoFocus
                         className="px-2 py-1 text-[12px] rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500 w-24"
@@ -755,6 +765,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                     type="time"
                     value={newTodo.time}
                     onChange={(e) => setNewTodo({ ...newTodo, time: e.target.value })}
+                    onFocus={ensureFieldVisibleOnFocus}
                     className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[13px]"
                   />
                 </div>
@@ -813,7 +824,9 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   ))}
                 </select>
               </div>
+            </div>
 
+            <div className="border-t border-gray-100 bg-white/95 backdrop-blur px-6 pt-3 pb-[calc(12px+var(--safe-area-bottom))]">
               <button
                 onClick={handleAddTodo}
                 className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all"
@@ -830,8 +843,8 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
       {showEditModal && editingTodo && (
         <ModalPortal>
           <div className="modal-backdrop bg-black/50 flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md p-6 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
+            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md flex flex-col overflow-hidden">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-[20px] font-bold text-gray-900">할일 수정</h2>
               <button
                 onClick={() => {
@@ -844,7 +857,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 overscroll-contain">
               <div>
                 <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                   할일
@@ -853,6 +866,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   type="text"
                   value={editingTodo.title}
                   onChange={(e) => setEditingTodo({ ...editingTodo, title: e.target.value })}
+                  onFocus={ensureFieldVisibleOnFocus}
                   className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[14px]"
                 />
               </div>
@@ -887,6 +901,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                     type="time"
                     value={editingTodo.time || ''}
                     onChange={(e) => setEditingTodo({ ...editingTodo, time: e.target.value })}
+                    onFocus={ensureFieldVisibleOnFocus}
                     className="w-full px-3 py-2 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-[13px]"
                   />
                 </div>
@@ -924,7 +939,9 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                   ))}
                 </select>
               </div>
+            </div>
 
+            <div className="border-t border-gray-100 bg-white/95 backdrop-blur px-6 pt-3 pb-[calc(12px+var(--safe-area-bottom))]">
               <button
                 onClick={handleUpdateTodo}
                 className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all"

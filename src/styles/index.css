@@ -9,7 +9,7 @@
   --z-bottom-tab: 40;
   --z-modal-backdrop: 80;
   --z-modal-sheet: 81;
-  --modal-top-gap: 24px;
+  --modal-top-gap: 16px;
 }
 
 html,
@@ -55,5 +55,5 @@ body {
   position: relative;
   z-index: var(--z-modal-sheet);
   max-height: calc(100dvh - var(--modal-top-gap));
-  padding-bottom: calc(24px + var(--safe-area-bottom));
+  padding-bottom: var(--safe-area-bottom);
 }
