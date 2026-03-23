@@ -272,7 +272,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
             const isCompleted = isRoutineCompleted(routine, referenceDate);
             const displayCount = getRoutineDisplayCount(routine, referenceDate);
             const periodCount = getRoutineCountForPeriod(routine, referenceDate);
-            const progressPercentage = (periodCount / routine.targetCount) * 100;
+            const rawProgressPercentage = (periodCount / routine.targetCount) * 100;
+            const progressPercentage = Math.max(0, Math.min(100, rawProgressPercentage));
 
             return (
               <div
