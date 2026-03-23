@@ -118,14 +118,23 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     updateGoal(goalId, { expanded: !goal.expanded });
   };
 
-  const calculateRoutinesProgress = (routines: LinkedRoutine[]) => {
-    if (routines.length === 0) return 0;
-    const totalProgress = routines.reduce((sum, r) => sum + r.currentProgress, 0);
-    return Math.round(totalProgress / routines.length);
-  };
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
-  const calculateGoalProgress = (goal: Goal) => {
-    return calculateRoutinesProgress(goal.linkedRoutines);
+  const getGoalProgressMeta = (goal: Goal) => {
+    const completed = goal.linkedRoutines.reduce((sum, routine) => sum + routine.currentCount, 0);
+    const total = goal.linkedRoutines.reduce((sum, routine) => sum + routine.targetCount, 0);
+    const rawPercent = total > 0 ? (completed / total) * 100 : 0;
+    const progressPercent = clampPercent(rawPercent);
+    const roundedPercent = Math.round(progressPercent);
+    const isOverAchieved = completed > total;
+    const overCount = isOverAchieved ? completed - total : 0;
+
+    return {
+      roundedPercent,
+      progressPercent,
+      isOverAchieved,
+      overCount,
+    };
   };
 
   const handleAddGoal = async () => {
@@ -267,7 +276,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
           return (
             <div
               key={routine.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 relative"
+              className={`flex items-center gap-3 p-3 rounded-xl bg-gray-50 relative overflow-visible ${showRoutineMenu === routine.id ? "z-30" : "z-10"}`}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setShowRoutineMenu(routine.id);
@@ -282,19 +291,19 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
               <p className="text-[14px] font-medium text-gray-800 mb-1">
                 {routine.title}
               </p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex-1 min-w-0 bg-gray-200 rounded-full h-1.5">
                   <div
                     className="bg-gradient-to-r from-blue-400 to-blue-500 rounded-full h-1.5 transition-all"
-                    style={{ width: `${routine.currentProgress}%` }}
+                    style={{ width: `${clampPercent(routine.currentProgress)}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-600 font-medium">
+                <p className="text-[11px] text-gray-600 font-semibold min-w-[44px] text-right">
                   {routine.currentCount}/{routine.targetCount}
                 </p>
               </div>
             </div>
-            {routine.currentProgress >= 100 && (
+            {routine.currentCount >= routine.targetCount && (
               <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
             )}
             <button
@@ -309,7 +318,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
             </button>
 
             {showRoutineMenu === routine.id && (
-              <div className="absolute right-2 top-12 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-[100] min-w-[112px]">
+              <div className="absolute right-2 top-11 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-[120] min-w-[112px]">
                 <button
                   onClick={() => {
                     openEditRoutineModal(routine.id);
@@ -342,11 +351,12 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   };
 
   const GoalCard = ({ goal }: { goal: Goal }) => {
-    const progress = calculateGoalProgress(goal);
+    const { roundedPercent, progressPercent, isOverAchieved, overCount } = getGoalProgressMeta(goal);
     const hasRoutines = goal.linkedRoutines.length > 0;
+    const isGoalMenuOpen = showGoalMenu === goal.id;
 
     return (
-      <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-white/50 overflow-hidden">
+      <div className={`bg-white/60 backdrop-blur-sm rounded-xl border border-white/50 overflow-visible relative ${isGoalMenuOpen ? "z-40" : "z-10"}`}>
         {/* Goal Header */}
         <div className={`bg-gradient-to-br ${goal.color} p-2`}>
           <div className="flex items-center justify-between">
@@ -365,42 +375,17 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
               </h3>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-              <span className="text-gray-800 font-bold text-[13px]">{progress}%</span>
+              <div className="text-right leading-tight">
+                <span className="text-gray-800 font-bold text-[13px]">{roundedPercent}%</span>
+                {isOverAchieved && (
+                  <p className="text-[10px] font-semibold text-emerald-700">+{overCount} 🎉</p>
+                )}
+              </div>
               <button 
                 onClick={() => setShowGoalMenu(showGoalMenu === goal.id ? null : goal.id)}
-                className="w-5 h-5 rounded-full bg-white/30 flex items-center justify-center hover:bg-white/40 transition-colors relative"
+                className="w-5 h-5 rounded-full bg-white/30 flex items-center justify-center hover:bg-white/40 transition-colors"
               >
                 <MoreVertical className="w-3 h-3 text-gray-700" />
-                
-                {/* Goal Menu */}
-                {showGoalMenu === goal.id && (
-                  <div className="absolute right-0 top-6 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100] min-w-[100px]">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditGoalModal(goal);
-                        setShowGoalMenu(null);
-                      }}
-                      className="w-full px-3 py-1.5 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      수정
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`"${goal.title}" 목표를 삭제하시겠습니까?\n연결된 루틴도 함께 삭제됩니다.`)) {
-                          deleteGoal(goal.id);
-                        }
-                        setShowGoalMenu(null);
-                      }}
-                      className="w-full px-3 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      삭제
-                    </button>
-                  </div>
-                )}
               </button>
             </div>
           </div>
@@ -409,10 +394,38 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
           <div className="w-full bg-white/40 rounded-full h-1 mt-1.5">
             <div
               className="bg-white rounded-full h-1 transition-all duration-500"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
+        {isGoalMenuOpen && (
+          <div className="absolute right-2 top-10 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[120] min-w-[100px]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditGoalModal(goal);
+                setShowGoalMenu(null);
+              }}
+              className="w-full px-3 py-1.5 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Edit2 className="w-3 h-3" />
+              수정
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`"${goal.title}" 목표를 삭제하시겠습니까?\n연결된 루틴도 함께 삭제됩니다.`)) {
+                  deleteGoal(goal.id);
+                }
+                setShowGoalMenu(null);
+              }}
+              className="w-full px-3 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <Trash2 className="w-3 h-3" />
+              삭제
+            </button>
+          </div>
+        )}
 
         {/* Content Section */}
         {hasRoutines && (
@@ -552,7 +565,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
         ) : (
           /* Mandala View - 3x3 Grid */
           <div className="space-y-6">
-            {goals.map((goal) => (
+            {goals.map((goal) => {
+              const { roundedPercent, isOverAchieved, overCount } = getGoalProgressMeta(goal);
+              return (
               <div key={goal.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/50">
                 <h3 className="text-[15px] font-bold text-gray-900 mb-3 text-center">
                   {goal.title}
@@ -563,9 +578,10 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     <p className="text-[11px] font-bold text-gray-800 text-center leading-tight">
                       {goal.title}
                     </p>
-                    <p className="text-[10px] text-gray-600 mt-1">
-                      {calculateGoalProgress(goal)}%
-                    </p>
+                    <p className="text-[10px] text-gray-600 mt-1">{roundedPercent}%</p>
+                    {isOverAchieved && (
+                      <p className="text-[9px] text-emerald-700 font-semibold mt-0.5">+{overCount} 🎉</p>
+                    )}
                   </div>
 
                   {/* Surrounding Cells - Routines */}
@@ -614,7 +630,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                             {routine.title}
                           </p>
                           <p className="text-[8px] text-purple-600 font-bold mt-1">
-                            {routine.currentProgress}%
+                            {Math.round(clampPercent(routine.currentProgress))}%
                           </p>
                           
                           {/* Routine Menu */}
@@ -681,7 +697,8 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                   </>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

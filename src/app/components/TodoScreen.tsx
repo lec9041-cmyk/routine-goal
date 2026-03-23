@@ -263,7 +263,8 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
 
   const totalCount = filteredTodos.length;
   const completedCount = filteredTodos.filter(t => t.completed).length;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const rawProgress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const progress = Math.max(0, Math.min(100, rawProgress));
 
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -394,10 +395,10 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
             const totalSubTasks = todo.subTasks?.length || 0;
 
             return (
-              <div key={todo.id} className="relative z-10">
+              <div key={todo.id} className={`relative ${showDeleteMenu === todo.id ? "z-40" : "z-10"}`}>
                 {/* Main Todo */}
-                <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 hover:bg-white/90 transition-all shadow-sm">
-                  <div className="p-2.5">
+                <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 hover:bg-white/90 transition-all shadow-sm overflow-visible">
+                  <div className="p-3">
                     <div className="flex items-start gap-2.5">
                       <button
                         onClick={() => toggleTodo(todo.id)}
@@ -474,7 +475,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-1 flex-shrink-0 relative">
+                      <div className="flex flex-col gap-1 flex-shrink-0 relative overflow-visible">
                         {hasSubTasks && (
                           <button
                             onClick={() => toggleExpand(todo.id)}
@@ -496,7 +497,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                         
                         {/* Delete Menu */}
                         {showDeleteMenu === todo.id && (
-                          <div className="absolute right-0 top-8 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100] min-w-[100px]">
+                          <div className="absolute right-0 top-8 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[120] min-w-[100px]">
                             <button
                               onClick={() => handleEditTodo(todo)}
                               className="w-full px-3 py-1.5 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -518,8 +519,8 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
 
                     {/* Add SubTask Input - 카드 하단 */}
                     {showAddSubTask === todo.id && !todo.completed && (
-                      <div className="px-2.5 pb-2.5">
-                        <div className="flex gap-1">
+                      <div className="pt-2.5 mt-2 border-t border-gray-100">
+                        <div className="flex gap-1.5">
                           <input
                             type="text"
                             value={newSubTaskText}
@@ -532,14 +533,14 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                             }}
                             placeholder="서브태스크 입력..."
                             autoFocus
-                            className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-purple-500"
+                            className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-purple-500"
                           />
                           <button
                             onClick={() => {
                               addSubTask(todo.id);
                               setShowAddSubTask(null);
                             }}
-                            className="px-2.5 py-1.5 bg-purple-500 text-white rounded-lg text-[11px] font-medium"
+                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[11px] font-medium"
                           >
                             추가
                           </button>
@@ -548,7 +549,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                               setShowAddSubTask(null);
                               setNewSubTaskText("");
                             }}
-                            className="px-2 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px]"
+                            className="px-2.5 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px]"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -559,11 +560,11 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
 
                   {/* SubTasks */}
                   {todo.expanded && hasSubTasks && (
-                    <div className="ml-8 mt-1 space-y-1">
+                    <div className="ml-7 mr-3 mb-3 pt-1 space-y-1.5">
                       {todo.subTasks!.map((subTask) => (
                         <div
                           key={subTask.id}
-                          className="bg-white/50 rounded-lg p-2 flex items-center gap-2"
+                          className="bg-white/60 rounded-lg p-2 flex items-center gap-2 border border-white/80"
                         >
                           <button
                             onClick={() => toggleSubTask(todo.id, subTask.id)}
@@ -616,65 +617,6 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
                     </div>
                   )}
                 </div>
-
-                {/* SubTasks */}
-                {todo.expanded && hasSubTasks && (
-                  <div className="ml-8 mt-1 space-y-1">
-                    {todo.subTasks!.map((subTask) => (
-                      <div
-                        key={subTask.id}
-                        className="bg-white/50 rounded-lg p-2 flex items-center gap-2"
-                      >
-                        <button
-                          onClick={() => toggleSubTask(todo.id, subTask.id)}
-                          className="flex-shrink-0"
-                        >
-                          {subTask.completed ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
-                          ) : (
-                            <Circle className="w-3.5 h-3.5 text-gray-300" />
-                          )}
-                        </button>
-                        <p
-                          className={`text-[12px] flex-1 ${
-                            subTask.completed
-                              ? "text-gray-400 line-through"
-                              : "text-gray-700"
-                          }`}
-                        >
-                          {subTask.title}
-                        </p>
-                      </div>
-                    ))}
-                    {newSubTaskId === todo.id ? (
-                      <div className="flex gap-1">
-                        <input
-                          type="text"
-                          value={newSubTaskText}
-                          onChange={(e) => setNewSubTaskText(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && addSubTask(todo.id)}
-                          placeholder="서브태스크 입력..."
-                          autoFocus
-                          className="flex-1 px-2 py-1 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500"
-                        />
-                        <button
-                          onClick={() => addSubTask(todo.id)}
-                          className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px]"
-                        >
-                          추가
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setNewSubTaskId(todo.id)}
-                        className="w-full py-1.5 text-[11px] text-gray-500 hover:text-blue-600 flex items-center justify-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" />
-                        서브태스크 추가
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })}
