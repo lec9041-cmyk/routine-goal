@@ -42,11 +42,13 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const selectedDateRoutines = routines.map((routine) => {
     const completedCount = getRoutineDisplayCount(routine, selectedDate);
     const isCompleted = isRoutineCompleted(routine, selectedDate);
+    const isDoneOnSelectedDate = (routine.completedDates ?? []).includes(toDateKey(selectedDate));
 
     return {
       ...routine,
       completedCount,
       isCompleted,
+      isDoneOnSelectedDate,
     };
   });
 
@@ -56,22 +58,24 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
       return true;
     }
 
-    return routine.frequency === "weekly"
-      && routine.scheduleType === "specific"
-      && Boolean(routine.specificDays?.includes(selectedDayOfWeek));
+    if (routine.frequency === "weekly" && routine.scheduleType === "specific") {
+      return Boolean(routine.specificDays?.includes(selectedDayOfWeek));
+    }
+
+    if (routine.frequency === "monthly" && routine.scheduleType === "specific") {
+      return Boolean(routine.specificDays?.includes(selectedDate.getDate()));
+    }
+
+    return true;
   });
 
   const deferredRoutines = selectedDateRoutines.filter((routine) =>
     (routine.frequency === "weekly" || routine.frequency === "monthly")
-    && routine.scheduleType !== "specific"
+    && routine.scheduleType === "specific"
+    && !actionableRoutines.some((item) => item.id === routine.id)
   );
 
-  const isRoutineDoneForSelectedDate = (routine: (typeof selectedDateRoutines)[number]) => {
-    const isDoneToday = (routine.completedDates ?? []).includes(toDateKey(selectedDate));
-    return routine.frequency === "weekly" && routine.trackingType === "count"
-      ? isDoneToday
-      : routine.isCompleted;
-  };
+  const isRoutineDoneForSelectedDate = (routine: (typeof selectedDateRoutines)[number]) => routine.isDoneOnSelectedDate;
 
   const incompleteActionableRoutines = actionableRoutines.filter(
     (routine) => !isRoutineDoneForSelectedDate(routine)
@@ -101,7 +105,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const totalTodos = selectedDateTodos.length;
   const completedTodosCount = completedTodos.length;
   const totalRoutines = actionableRoutines.length;
-  const completedRoutinesCount = actionableRoutines.filter((routine) => routine.isCompleted).length;
+  const completedRoutinesCount = actionableRoutines.filter((routine) => isRoutineDoneForSelectedDate(routine)).length;
   const totalItems = totalTodos + totalRoutines;
   const completedItems = completedTodosCount + completedRoutinesCount;
   const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -190,6 +194,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     const isCompleted = routine.isCompleted;
     const showDailyCompletionStyle = isRoutineDoneForSelectedDate(routine);
     const hasProgress = displayCount > 0;
+    const overAchieved = Math.max(0, displayCount - routine.targetCount);
     const progressPercent = Math.min(100, Math.round((displayCount / routine.targetCount) * 100));
     const linkedGoal = routine.linkedGoalId
       ? goals.find((goal) => goal.id === routine.linkedGoalId)
@@ -246,6 +251,9 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 {displayCount}/{routine.targetCount}
               </span>
             </div>
+            {overAchieved > 0 && (
+              <p className="text-[10px] text-indigo-600 mt-1 font-semibold">초과 달성 +{overAchieved}</p>
+            )}
             {routine.targetCount > 1 && (
               <div className="mt-1.5">
                 <div className="w-full h-1.5 rounded-full bg-gray-200/70 overflow-hidden">

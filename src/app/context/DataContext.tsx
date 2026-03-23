@@ -85,6 +85,7 @@ export interface Routine {
   endDate?: string;
   scheduleType?: "count" | "specific";
   specificDays?: number[];
+  description?: string;
 }
 
 // Context type
@@ -160,6 +161,30 @@ const normalizeCompletedDates = (completedDates: string[] = []) => {
 
 const getRoutineTrackedCount = (routine: Routine, referenceDate: Date = new Date()) => {
   return getRoutineCountForPeriod(routine, referenceDate);
+};
+
+const toLinkedRoutine = (routine: Routine): LinkedRoutine => {
+  const trackedCount = getRoutineTrackedCount(routine);
+  return {
+    id: routine.id,
+    title: routine.title,
+    icon: routine.icon,
+    currentProgress: (trackedCount / routine.targetCount) * 100,
+    targetCount: routine.targetCount,
+    currentCount: trackedCount,
+    frequency: routine.frequency,
+    trackingType: routine.trackingType,
+    selectedDays: routine.selectedDays,
+  };
+};
+
+const syncGoalsWithRoutines = (goals: Goal[], routines: Routine[]) => {
+  return goals.map((goal) => ({
+    ...goal,
+    linkedRoutines: routines
+      .filter((routine) => routine.linkedGoalId === goal.id)
+      .map(toLinkedRoutine),
+  }));
 };
 
 // Provider component
@@ -254,77 +279,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
       completedDates: normalizeCompletedDates(routine.completedDates),
     };
 
-    setRoutines(prev => [...prev, normalizedRoutine]);
-    
-    if (normalizedRoutine.linkedGoalId) {
-      const trackedCount = getRoutineTrackedCount(normalizedRoutine);
-      setGoals(prev => prev.map(g => {
-        if (g.id === normalizedRoutine.linkedGoalId) {
-          const linkedRoutine: LinkedRoutine = {
-            id: normalizedRoutine.id,
-            title: normalizedRoutine.title,
-            icon: normalizedRoutine.icon,
-            currentProgress: (trackedCount / normalizedRoutine.targetCount) * 100,
-            targetCount: normalizedRoutine.targetCount,
-            currentCount: trackedCount,
-            frequency: normalizedRoutine.frequency,
-            trackingType: normalizedRoutine.trackingType,
-            selectedDays: normalizedRoutine.selectedDays,
-          };
-          return {
-            ...g,
-            linkedRoutines: [...g.linkedRoutines, linkedRoutine]
-          };
-        }
-        return g;
-      }));
-    }
+    setRoutines(prev => {
+      const updatedRoutines = [...prev, normalizedRoutine];
+      setGoals(currentGoals => syncGoalsWithRoutines(currentGoals, updatedRoutines));
+      return updatedRoutines;
+    });
   };
 
   const updateRoutine = (id: string, updates: Partial<Routine>) => {
-    let updatedRoutine: Routine | null = null;
-    setRoutines(prev => prev.map(r => {
-      if (r.id === id) {
-        updatedRoutine = {
-          ...r,
-          ...updates,
-          completedDates: normalizeCompletedDates(updates.completedDates ?? r.completedDates),
-        };
-        return updatedRoutine;
-      }
-      return r;
-    }));
-    
-    setGoals(prev => prev.map(g => ({
-      ...g,
-      linkedRoutines: g.linkedRoutines.map(lr => {
-        if (lr.id === id) {
-          const targetCount = updates.targetCount ?? lr.targetCount;
-          const trackedCount = updatedRoutine ? getRoutineTrackedCount(updatedRoutine) : lr.currentCount;
+    setRoutines(prev => {
+      const updatedRoutines = prev.map(r => {
+        if (r.id === id) {
           return {
-            ...lr,
-            title: updates.title ?? lr.title,
-            icon: updates.icon ?? lr.icon,
-            frequency: updates.frequency ?? lr.frequency,
-            trackingType: updates.trackingType ?? lr.trackingType,
-            currentCount: trackedCount,
-            targetCount,
-            currentProgress: (trackedCount / targetCount) * 100,
-            selectedDays: updates.selectedDays ?? lr.selectedDays,
+            ...r,
+            ...updates,
+            completedDates: normalizeCompletedDates(updates.completedDates ?? r.completedDates),
           };
         }
-        return lr;
-      })
-    })));
+        return r;
+      });
+
+      setGoals(currentGoals => syncGoalsWithRoutines(currentGoals, updatedRoutines));
+      return updatedRoutines;
+    });
   };
 
   const deleteRoutine = (id: string) => {
-    setRoutines(prev => prev.filter(r => r.id !== id));
-    
-    setGoals(prev => prev.map(g => ({
-      ...g,
-      linkedRoutines: g.linkedRoutines.filter(lr => lr.id !== id)
-    })));
+    setRoutines(prev => {
+      const updatedRoutines = prev.filter(r => r.id !== id);
+      setGoals(currentGoals => syncGoalsWithRoutines(currentGoals, updatedRoutines));
+      return updatedRoutines;
+    });
   };
 
   const incrementRoutine = (id: string) => {
@@ -342,22 +327,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return { ...r, completedDates: normalizeCompletedDates([...completedDates, todayKey]) };
       });
 
-      setGoals(currentGoals => currentGoals.map(g => ({
-        ...g,
-        linkedRoutines: g.linkedRoutines.map(lr => {
-          const updatedRoutine = updatedRoutines.find(r => r.id === lr.id);
-          if (!updatedRoutine) {
-            return lr;
-          }
-
-          const currentCount = getRoutineTrackedCount(updatedRoutine);
-          return {
-            ...lr,
-            currentCount,
-            currentProgress: (currentCount / lr.targetCount) * 100,
-          };
-        })
-      })));
+      setGoals(currentGoals => syncGoalsWithRoutines(currentGoals, updatedRoutines));
 
       return updatedRoutines;
     });
@@ -382,22 +352,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
       });
 
-      setGoals(currentGoals => currentGoals.map(g => ({
-        ...g,
-        linkedRoutines: g.linkedRoutines.map(lr => {
-          const updatedRoutine = updatedRoutines.find(r => r.id === lr.id);
-          if (!updatedRoutine) {
-            return lr;
-          }
-
-          const currentCount = getRoutineTrackedCount(updatedRoutine);
-          return {
-            ...lr,
-            currentCount,
-            currentProgress: (currentCount / lr.targetCount) * 100,
-          };
-        })
-      })));
+      setGoals(currentGoals => syncGoalsWithRoutines(currentGoals, updatedRoutines));
 
       return updatedRoutines;
     });
