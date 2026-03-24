@@ -21,7 +21,7 @@ type RoutineFormState = {
   description: string;
   linkedGoalId: string;
   frequency: "daily" | "weekly" | "monthly";
-  targetCount: number;
+  targetCount: string;
   time: string;
   notificationEnabled: boolean;
   timeOfDay: "morning" | "afternoon" | "evening" | "anytime";
@@ -40,7 +40,7 @@ const defaultFormState: RoutineFormState = {
   description: "",
   linkedGoalId: "",
   frequency: "daily",
-  targetCount: 1,
+  targetCount: "",
   time: "",
   notificationEnabled: false,
   timeOfDay: "anytime",
@@ -54,15 +54,14 @@ const defaultFormState: RoutineFormState = {
 
 const weekdayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 
-const getWeekDatesMondayToSunday = (referenceDate: Date) => {
+const getWeekDatesSundayToSaturday = (referenceDate: Date) => {
   const day = referenceDate.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const monday = new Date(referenceDate);
-  monday.setDate(referenceDate.getDate() + mondayOffset);
+  const sunday = new Date(referenceDate);
+  sunday.setDate(referenceDate.getDate() - day);
 
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + index);
     return date;
   });
 };
@@ -86,7 +85,7 @@ const toRoutineFormState = (routine?: Routine): RoutineFormState => {
     description: routine.description ?? "",
     linkedGoalId: routine.linkedGoalId ?? "",
     frequency: routine.frequency,
-    targetCount: routine.targetCount,
+    targetCount: routine.targetCount ? String(routine.targetCount) : "",
     time: routine.time ?? "",
     notificationEnabled: Boolean(routine.notificationEnabled),
     timeOfDay: routine.timeOfDay ?? "anytime",
@@ -108,6 +107,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
   const [newRoutine, setNewRoutine] = useState<RoutineFormState>(defaultFormState);
   const [viewMode, setViewMode] = useState<"all" | "weekly" | "monthly">("all");
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
+  const [monthlyExpanded, setMonthlyExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (shouldOpenAddModal) {
@@ -117,10 +117,42 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     }
   }, [shouldOpenAddModal]);
 
+  useEffect(() => {
+    if (!showAddModal) return;
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isIOS || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    const updateInset = () => {
+      const inset = Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop));
+      document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    };
+
+    updateInset();
+    viewport.addEventListener("resize", updateInset);
+    window.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      viewport.removeEventListener("resize", updateInset);
+      window.removeEventListener("focusin", handleFocusIn);
+      document.documentElement.style.setProperty("--keyboard-inset", "0px");
+    };
+  }, [showAddModal]);
+
   const today = new Date();
   const todayKey = toDateKey(today);
   const referenceDate = new Date(`${selectedDateKey}T00:00:00`);
-  const weekDates = useMemo(() => getWeekDatesMondayToSunday(referenceDate), [referenceDate]);
+  const weekDates = useMemo(() => getWeekDatesSundayToSaturday(referenceDate), [referenceDate]);
+  const thisWeekDates = useMemo(() => getWeekDatesSundayToSaturday(today), [todayKey]);
   const monthDates = useMemo(() => getMonthDates(referenceDate), [referenceDate]);
 
   const iconOptions = ["⭐", "💧", "💪", "🧘", "📚", "📖", "🏃", "🎨", "🎵", "🍎", "☕", "🌱", "✍️", "🧠", "❤️"];
@@ -146,6 +178,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
   const handleSaveRoutine = () => {
     if (!newRoutine.title.trim()) return;
+    const parsedTargetCount = Number.parseInt(newRoutine.targetCount, 10);
+    if (Number.isNaN(parsedTargetCount) || parsedTargetCount <= 0) return;
 
     const payload: Partial<Routine> = {
       title: newRoutine.title.trim(),
@@ -154,7 +188,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
       description: newRoutine.description,
       linkedGoalId: newRoutine.linkedGoalId || undefined,
       frequency: newRoutine.frequency,
-      targetCount: Math.max(1, newRoutine.targetCount),
+      targetCount: parsedTargetCount,
       trackingType: "days",
       time: newRoutine.time || undefined,
       notificationEnabled: newRoutine.time ? newRoutine.notificationEnabled : false,
@@ -210,6 +244,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
           {weekDates.map((date, idx) => {
             const dateKey = toDateKey(date);
             const isToday = dateKey === todayKey;
+            const isSelected = dateKey === selectedDateKey;
             const isCompleted = (routine.completedDates ?? []).includes(dateKey);
 
             return (
@@ -221,6 +256,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     ? "bg-emerald-500 text-white border-emerald-500"
                     : isToday
                       ? "bg-white border-purple-400 text-purple-700"
+                      : isSelected
+                        ? "bg-indigo-50 border-indigo-300 text-indigo-700"
                       : "bg-gray-50 border-gray-200 text-gray-500"
                 }`}
                 aria-label={`${routine.title} ${weekdayLabels[idx]}요일 체크`}
@@ -234,12 +271,16 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
     }
 
     if (routine.frequency === "monthly") {
+      const expanded = monthlyExpanded[routine.id] ?? false;
+      const visibleDates = expanded ? monthDates : thisWeekDates;
       return (
-        <div className="grid grid-cols-7 gap-1.5">
-          {monthDates.map((date) => {
+        <div className="space-y-2">
+          <div className={`grid grid-cols-7 gap-1.5 ${expanded ? "max-h-44 overflow-y-auto pr-1" : ""}`}>
+          {visibleDates.map((date) => {
             const dateKey = toDateKey(date);
             const dayNumber = date.getDate();
             const isToday = dateKey === todayKey;
+            const isSelected = dateKey === selectedDateKey;
             const isCompleted = (routine.completedDates ?? []).includes(dateKey);
             return (
               <button
@@ -250,6 +291,8 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                     ? "bg-amber-500 text-white border-amber-500"
                     : isToday
                       ? "bg-white border-purple-400 text-purple-700"
+                      : isSelected
+                        ? "bg-indigo-50 border-indigo-300 text-indigo-700"
                       : "bg-gray-50 border-gray-200 text-gray-600"
                 }`}
               >
@@ -257,6 +300,13 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
               </button>
             );
           })}
+        </div>
+          <button
+            onClick={() => setMonthlyExpanded((prev) => ({ ...prev, [routine.id]: !expanded }))}
+            className="w-full py-1.5 rounded-lg bg-gray-100 text-gray-700 text-[12px] font-medium hover:bg-gray-200 transition-colors"
+          >
+            {expanded ? "이번 주만 표시" : "전체 월 표시"}
+          </button>
         </div>
       );
     }
@@ -400,7 +450,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
                 <button onClick={resetModal} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><X className="w-5 h-5 text-gray-600" /></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4" style={{ paddingBottom: "calc(1rem + var(--keyboard-inset, 0px))" }}>
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">아이콘</label>
                   <div className="flex gap-2 flex-wrap">
@@ -497,7 +547,13 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
 
                 <div>
                   <label className="text-[13px] font-medium text-gray-700 mb-2 block">목표 횟수</label>
-                  <input type="number" min="1" value={newRoutine.targetCount} onChange={(e) => setNewRoutine({ ...newRoutine, targetCount: Math.max(1, parseInt(e.target.value, 10) || 1) })} className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px]" />
+                  <input
+                    type="number"
+                    min="1"
+                    value={newRoutine.targetCount}
+                    onChange={(e) => setNewRoutine({ ...newRoutine, targetCount: e.target.value.replace(/[^\d]/g, "") })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px]"
+                  />
                 </div>
 
                 <div>
@@ -527,7 +583,7 @@ export function RoutineScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Ro
               <div className="shrink-0 border-t border-gray-100 bg-white/95 px-5 pt-3 pb-[calc(14px+var(--safe-area-bottom)+var(--keyboard-inset))]">
                 <div className="flex gap-3">
                   <button onClick={resetModal} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-medium text-[14px]">취소</button>
-                  <button onClick={handleSaveRoutine} disabled={!newRoutine.title.trim()} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] disabled:opacity-50">{editingRoutineId ? "저장" : "추가하기"}</button>
+                  <button onClick={handleSaveRoutine} disabled={!newRoutine.title.trim() || !newRoutine.targetCount.trim()} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] disabled:opacity-50">{editingRoutineId ? "저장" : "추가하기"}</button>
                 </div>
               </div>
             </div>
