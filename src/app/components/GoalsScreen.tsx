@@ -60,7 +60,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     icon: "🎯",
     frequency: "weekly" as "daily" | "weekly" | "monthly",
     trackingType: "count" as "count" | "days",
-    targetCount: 1,
+    targetCount: "",
     selectedDays: [] as number[],
   });
   const [newGoalError, setNewGoalError] = useState("");
@@ -80,6 +80,26 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       setIsAddingGoal(false);
     }
   }, [showAddModal]);
+
+  useEffect(() => {
+    if (!showRoutineMenu && !showGoalMenu) return;
+
+    const closeMenusIfOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("[data-menu-trigger='true']") || target.closest("[data-menu-panel='true']")) return;
+      setShowRoutineMenu(null);
+      setShowGoalMenu(null);
+    };
+
+    document.addEventListener("mousedown", closeMenusIfOutside);
+    document.addEventListener("touchstart", closeMenusIfOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", closeMenusIfOutside);
+      document.removeEventListener("touchstart", closeMenusIfOutside);
+    };
+  }, [showRoutineMenu, showGoalMenu]);
   
   const [newGoal, setNewGoal] = useState({
     title: "",
@@ -94,7 +114,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     icon: "🎯",
     frequency: "weekly" as "daily" | "weekly" | "monthly",
     trackingType: "count" as "count" | "days",
-    targetCount: 7,
+    targetCount: "",
     selectedDays: [] as number[], // 0=일, 1=월, 2=화, 3=수, 4=목, 5=금, 6=토
   });
 
@@ -111,6 +131,14 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
   const goalModalChipClass = "min-h-10 px-4 rounded-xl text-[13px] font-medium transition-all";
 
   const iconOptions = ["🎯", "💪", "📚", "💧", "🧘", "🏃", "📖", "✍️", "🎨", "💻"];
+  const getMaxTargetCount = (frequency: "daily" | "weekly" | "monthly") => (frequency === "weekly" ? 7 : 31);
+  const sanitizeTargetCount = (value: string, frequency: "daily" | "weekly" | "monthly") => {
+    const digitsOnly = value.replace(/[^\d]/g, "");
+    if (!digitsOnly) return "";
+    const parsed = Number.parseInt(digitsOnly, 10);
+    if (Number.isNaN(parsed)) return "";
+    return String(Math.min(getMaxTargetCount(frequency), parsed));
+  };
 
   const toggleExpand = (goalId: string) => {
     const goal = goals.find(g => g.id === goalId);
@@ -177,6 +205,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
   const handleAddRoutine = () => {
     if (!newRoutine.title.trim() || !selectedGoalId) return;
+    const parsedTargetCount = Number.parseInt(newRoutine.targetCount, 10);
+    if (Number.isNaN(parsedTargetCount) || parsedTargetCount <= 0) return;
+    const nextTargetCount = Math.min(getMaxTargetCount(newRoutine.frequency), parsedTargetCount);
 
     // Create routine object
     const routine = {
@@ -184,7 +215,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       title: newRoutine.title,
       icon: newRoutine.icon,
       frequency: newRoutine.frequency,
-      targetCount: newRoutine.targetCount,
+      targetCount: nextTargetCount,
       currentCount: 0,
       completedDates: [],
       trackingType: newRoutine.trackingType,
@@ -200,7 +231,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     addRoutine(routine);
 
     setShowAddRoutineModal(false);
-    setNewRoutine({ title: "", icon: "🎯", frequency: "weekly", trackingType: "count", targetCount: 7, selectedDays: [] });
+    setNewRoutine({ title: "", icon: "🎯", frequency: "weekly", trackingType: "count", targetCount: "", selectedDays: [] });
     setSelectedGoalId("");
     setSelectedCellIndex(-1);
   };
@@ -246,7 +277,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       icon: routine.icon,
       frequency: routine.frequency,
       trackingType: routine.trackingType,
-      targetCount: routine.targetCount,
+      targetCount: String(routine.targetCount ?? ""),
       selectedDays: routine.selectedDays ?? [],
     });
     setShowEditRoutineModal(true);
@@ -254,12 +285,15 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
   const saveRoutineEdit = () => {
     if (!editingRoutineId || !editingRoutineForm.title.trim()) return;
+    const parsedTargetCount = Number.parseInt(editingRoutineForm.targetCount, 10);
+    if (Number.isNaN(parsedTargetCount) || parsedTargetCount <= 0) return;
+    const nextTargetCount = Math.min(getMaxTargetCount(editingRoutineForm.frequency), parsedTargetCount);
     updateRoutine(editingRoutineId, {
       title: editingRoutineForm.title.trim(),
       icon: editingRoutineForm.icon,
       frequency: editingRoutineForm.frequency,
       trackingType: editingRoutineForm.trackingType,
-      targetCount: editingRoutineForm.targetCount,
+      targetCount: nextTargetCount,
       selectedDays: editingRoutineForm.selectedDays,
     });
     setShowEditRoutineModal(false);
@@ -311,6 +345,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 e.stopPropagation();
                 setShowRoutineMenu(showRoutineMenu === routine.id ? null : routine.id);
               }}
+              data-menu-trigger="true"
               className="w-8 h-8 rounded-full hover:bg-gray-200/70 flex items-center justify-center"
               aria-label={`${routine.title} 루틴 액션`}
             >
@@ -318,7 +353,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
             </button>
 
             {showRoutineMenu === routine.id && (
-              <div className="absolute right-2 top-11 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-[120] min-w-[112px]">
+              <div data-menu-panel="true" className="absolute right-2 top-11 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-[120] min-w-[112px]">
                 <button
                   onClick={() => {
                     openEditRoutineModal(routine.id);
@@ -383,6 +418,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
               </div>
               <button 
                 onClick={() => setShowGoalMenu(showGoalMenu === goal.id ? null : goal.id)}
+                data-menu-trigger="true"
                 className="w-5 h-5 rounded-full bg-white/30 flex items-center justify-center hover:bg-white/40 transition-colors"
               >
                 <MoreVertical className="w-3 h-3 text-gray-700" />
@@ -399,7 +435,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
           </div>
         </div>
         {isGoalMenuOpen && (
-          <div className="absolute right-2 top-10 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[120] min-w-[100px]">
+          <div data-menu-panel="true" className="absolute right-2 top-10 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[120] min-w-[100px]">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -910,7 +946,13 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     ].map((freq) => (
                       <button
                         key={freq.value}
-                        onClick={() => setNewRoutine({ ...newRoutine, frequency: freq.value as any })}
+                        onClick={() =>
+                          setNewRoutine({
+                            ...newRoutine,
+                            frequency: freq.value as any,
+                            targetCount: sanitizeTargetCount(newRoutine.targetCount, freq.value as "daily" | "weekly" | "monthly"),
+                          })
+                        }
                         className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
                           newRoutine.frequency === freq.value
                             ? "bg-purple-500 text-white"
@@ -992,9 +1034,9 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     <input
                       type="number"
                       value={newRoutine.targetCount}
-                      onChange={(e) => setNewRoutine({ ...newRoutine, targetCount: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => setNewRoutine({ ...newRoutine, targetCount: sanitizeTargetCount(e.target.value, newRoutine.frequency) })}
                       min="1"
-                      max="30"
+                      max={getMaxTargetCount(newRoutine.frequency)}
                       className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
                     />
                   </div>
@@ -1024,7 +1066,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
                 <button
                   onClick={handleAddRoutine}
-                  disabled={!newRoutine.title.trim()}
+                  disabled={!newRoutine.title.trim() || !newRoutine.targetCount.trim()}
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   추가하기
@@ -1294,6 +1336,10 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                           setEditingRoutineForm({
                             ...editingRoutineForm,
                             frequency: freq.value as "daily" | "weekly" | "monthly",
+                            targetCount: sanitizeTargetCount(
+                              editingRoutineForm.targetCount,
+                              freq.value as "daily" | "weekly" | "monthly",
+                            ),
                           })
                         }
                         className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium ${
@@ -1311,11 +1357,12 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     <input
                       type="number"
                       min="1"
+                      max={getMaxTargetCount(editingRoutineForm.frequency)}
                       value={editingRoutineForm.targetCount}
                       onChange={(e) =>
                         setEditingRoutineForm({
                           ...editingRoutineForm,
-                          targetCount: parseInt(e.target.value) || 1,
+                          targetCount: sanitizeTargetCount(e.target.value, editingRoutineForm.frequency),
                         })
                       }
                       className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
@@ -1337,7 +1384,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
                 <button
                   onClick={saveRoutineEdit}
-                  disabled={!editingRoutineForm.title.trim()}
+                  disabled={!editingRoutineForm.title.trim() || !editingRoutineForm.targetCount.trim()}
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   수정하기
