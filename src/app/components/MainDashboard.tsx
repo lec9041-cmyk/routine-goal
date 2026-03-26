@@ -63,29 +63,75 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     routine.frequency === "monthly"
     && (routine.scheduleType === "count" || (routine.scheduleType !== "specific" && routine.trackingType === "count"));
 
-  const isTodayActionableRoutine = (routine: (typeof selectedDateRoutines)[number]) => {
-    if (isWeeklyCountingRoutine(routine) || isMonthlyCountingRoutine(routine)) {
-      return false;
+  const getRoutineMatchInfo = (routine: (typeof selectedDateRoutines)[number]) => {
+    if (routine.frequency === "daily") {
+      return { matchesToday: true, reason: "daily routine (매일 실행)" };
     }
 
-    if (routine.frequency === "daily") {
-      return true;
+    if (isWeeklyCountingRoutine(routine)) {
+      return { matchesToday: true, reason: "weekly count routine (주간 n회, 오늘 실행 가능)" };
+    }
+
+    if (isMonthlyCountingRoutine(routine)) {
+      return { matchesToday: true, reason: "monthly count routine (월간 n회, 오늘 실행 가능)" };
     }
 
     if (routine.frequency === "weekly") {
-      return Boolean(routine.specificDays?.includes(selectedDayOfWeek));
+      const isMatched = Boolean(routine.specificDays?.includes(selectedDayOfWeek));
+      return {
+        matchesToday: isMatched,
+        reason: isMatched
+          ? `weekly specific routine (요일 매칭: ${selectedDayOfWeek})`
+          : `weekly specific routine filtered out (오늘 요일 ${selectedDayOfWeek} 미포함)`,
+      };
     }
 
     if (routine.frequency === "monthly") {
-      return Boolean(routine.specificDays?.includes(selectedDayOfMonth));
+      const isMatched = Boolean(routine.specificDays?.includes(selectedDayOfMonth));
+      return {
+        matchesToday: isMatched,
+        reason: isMatched
+          ? `monthly specific routine (날짜 매칭: ${selectedDayOfMonth})`
+          : `monthly specific routine filtered out (오늘 날짜 ${selectedDayOfMonth} 미포함)`,
+      };
     }
 
-    return false;
+    return { matchesToday: false, reason: "unknown frequency" };
   };
 
-  const todayRoutines = selectedDateRoutines.filter(isTodayActionableRoutine);
+  const routineMatchResults = selectedDateRoutines.map((routine) => ({
+    routine,
+    ...getRoutineMatchInfo(routine),
+  }));
+
+  const todayRoutines = routineMatchResults
+    .filter((result) => result.matchesToday)
+    .map((result) => result.routine);
+
   const weeklyCountRoutines = selectedDateRoutines.filter(isWeeklyCountingRoutine);
   const monthlyCountRoutines = selectedDateRoutines.filter(isMonthlyCountingRoutine);
+
+  useEffect(() => {
+    const selectedDateKey = toDateKey(selectedDate);
+    console.group(`[MainDashboard][RoutineFilter] ${selectedDateKey} / filter=${activeFilter}`);
+    console.log("before filter (selectedDateRoutines)", selectedDateRoutines);
+    console.table(
+      routineMatchResults.map(({ routine, matchesToday, reason }) => ({
+        id: routine.id,
+        title: routine.title,
+        frequency: routine.frequency,
+        scheduleType: routine.scheduleType,
+        trackingType: routine.trackingType,
+        specificDays: routine.specificDays?.join(",") ?? "-",
+        matchesToday,
+        reason,
+      }))
+    );
+    console.log("after filter (todayRoutines)", todayRoutines);
+    console.log("weeklyCountRoutines", weeklyCountRoutines);
+    console.log("monthlyCountRoutines", monthlyCountRoutines);
+    console.groupEnd();
+  }, [activeFilter, monthlyCountRoutines, routineMatchResults, selectedDate, selectedDateRoutines, todayRoutines, weeklyCountRoutines]);
 
   const isRoutineDoneForSelectedDate = (routine: (typeof selectedDateRoutines)[number]) => routine.isDoneOnSelectedDate;
 
@@ -554,7 +600,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               )}
               {completedTodayRoutines.map((routine) => renderRoutineListItem(routine))}
 
-              {todayRoutines.length === 0 && activeFilter === "routine" && (
+              {todayRoutines.length === 0 && weeklyCountRoutines.length === 0 && monthlyCountRoutines.length === 0 && activeFilter === "routine" && (
                 <div className={`${itemCardClass} p-6 text-center`}>
                   <Target className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-600 text-[13px]">오늘 할 루틴 없음</p>
@@ -567,7 +613,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 </div>
               )}
 
-              {activeFilter === "all" && (
+              {(activeFilter === "all" || activeFilter === "routine") && (
                 <>
                   <div className="flex items-center justify-between px-1 pt-2">
                     <h3 className="text-[12px] font-bold text-gray-600">이번주 루틴</h3>
