@@ -584,28 +584,6 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
             </button>
           </div>
 
-          <div className="flex items-center bg-white/60 rounded-lg p-0.5">
-            <button
-              onClick={() => setViewMode("default")}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
-                viewMode === "default"
-                  ? "bg-blue-500 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-white/80"
-              }`}
-            >
-              기본 보기
-            </button>
-            <button
-              onClick={() => setViewMode("category")}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
-                viewMode === "category"
-                  ? "bg-blue-500 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-white/80"
-              }`}
-            >
-              카테고리 보기
-            </button>
-          </div>
         </div>
 
         <div className="mt-2 flex items-center gap-1.5">
