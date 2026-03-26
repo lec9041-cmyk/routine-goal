@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronRight, X } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { Switch } from "./ui/switch";
@@ -20,6 +20,7 @@ export function SettingsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const authModalScrollRef = useRef<HTMLDivElement | null>(null);
 
   const refreshCurrentUser = async () => {
     const { user, error } = await getCurrentUser();
@@ -35,6 +36,57 @@ export function SettingsScreen() {
   useEffect(() => {
     void refreshCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthModalOpen) {
+      document.documentElement.style.setProperty("--keyboard-inset", "0px");
+      return;
+    }
+
+    const updateKeyboardInset = () => {
+      const viewport = window.visualViewport;
+
+      if (!viewport) {
+        document.documentElement.style.setProperty("--keyboard-inset", "0px");
+        return;
+      }
+
+      const keyboardInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      document.documentElement.style.setProperty("--keyboard-inset", `${keyboardInset}px`);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!authModalScrollRef.current) {
+        return;
+      }
+
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      if (!target.matches("input, textarea, select")) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 120);
+    };
+
+    updateKeyboardInset();
+    window.visualViewport?.addEventListener("resize", updateKeyboardInset);
+    window.visualViewport?.addEventListener("scroll", updateKeyboardInset);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.documentElement.style.setProperty("--keyboard-inset", "0px");
+      window.visualViewport?.removeEventListener("resize", updateKeyboardInset);
+      window.visualViewport?.removeEventListener("scroll", updateKeyboardInset);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
+  }, [isAuthModalOpen]);
 
   const handleResetData = () => {
     const shouldReset = window.confirm("모든 목표/루틴/할일 데이터를 삭제할까요? 이 작업은 되돌릴 수 없습니다.");
@@ -156,10 +208,10 @@ export function SettingsScreen() {
       </div>
 
       {isAuthModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/28 backdrop-blur-[1px] flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="w-full max-w-md max-h-[calc(100dvh-8px)] sm:max-h-[calc(100dvh-32px)] overflow-hidden bg-gradient-to-b from-white to-violet-50/55 rounded-t-3xl sm:rounded-2xl shadow-[0_8px_24px_rgba(15,23,42,0.14)] border border-violet-100">
-            <div className="overflow-y-auto px-4 pt-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-              <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-slate-900/28 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-0 pb-[calc(12px+env(safe-area-inset-bottom))] pt-4 sm:p-4 z-50">
+          <div className="modal-sheet w-full max-w-md h-[min(90dvh,760px)] bg-gradient-to-b from-white to-violet-50/55 rounded-t-[28px] sm:rounded-2xl shadow-[0_8px_24px_rgba(15,23,42,0.14)] border border-violet-100 flex flex-col overflow-hidden">
+            <div className="shrink-0 px-5 pt-4 pb-3 border-b border-violet-100/80 bg-white/95">
+              <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">계정 생성 / 연동</h2>
                 <button
                   type="button"
@@ -169,11 +221,16 @@ export function SettingsScreen() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+            </div>
 
-              <div className="flex gap-2 mb-3 p-1 rounded-xl bg-violet-100/60 border border-violet-100">
+            <div
+              ref={authModalScrollRef}
+              className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-[calc(20px+var(--safe-area-bottom)+var(--keyboard-inset))]"
+            >
+              <div className="flex gap-2 mb-4 p-1 rounded-xl bg-violet-100/60 border border-violet-100 w-full">
                 <button
                   type="button"
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`flex-1 min-w-0 rounded-lg px-3 h-10 text-sm font-medium transition-colors ${
                     authMode === "signin"
                       ? "bg-violet-500 text-white shadow-sm"
                       : "bg-transparent text-gray-600 hover:bg-white/70"
@@ -184,7 +241,7 @@ export function SettingsScreen() {
                 </button>
                 <button
                   type="button"
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`flex-1 min-w-0 rounded-lg px-3 h-10 text-sm font-medium transition-colors ${
                     authMode === "signup"
                       ? "bg-violet-500 text-white shadow-sm"
                       : "bg-transparent text-gray-600 hover:bg-white/70"
@@ -195,31 +252,33 @@ export function SettingsScreen() {
                 </button>
               </div>
 
-              <label className="block text-sm text-gray-700 mb-1">이메일</label>
+              <label className="block text-sm text-gray-700 mb-1.5">이메일</label>
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-xl border border-violet-200 bg-white/80 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
+                className="w-full rounded-xl border border-violet-200 bg-white/80 px-3 h-11 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
                 placeholder="you@example.com"
               />
 
-              <label className="block text-sm text-gray-700 mb-1">비밀번호</label>
+              <label className="block text-sm text-gray-700 mb-1.5">비밀번호</label>
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-xl border border-violet-200 bg-white/80 px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
+                className="w-full rounded-xl border border-violet-200 bg-white/80 px-3 h-11 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
                 placeholder="6자 이상 입력"
               />
 
               {authMessage && <p className="text-sm text-gray-700 bg-violet-50 border border-violet-100 rounded-xl p-2 mb-3">{authMessage}</p>}
+            </div>
 
+            <div className="shrink-0 border-t border-violet-100/80 bg-white/95 px-5 pt-3 pb-[calc(12px+var(--safe-area-bottom)+var(--keyboard-inset))]">
               <button
                 type="button"
                 onClick={handleAuthSubmit}
                 disabled={isSubmitting}
-                className="w-full bg-violet-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-600 transition-colors disabled:opacity-60"
+                className="w-full h-11 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-violet-600 transition-colors disabled:opacity-60"
               >
                 {isSubmitting ? "처리 중..." : authMode === "signin" ? "로그인" : "회원가입"}
               </button>
@@ -228,7 +287,7 @@ export function SettingsScreen() {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="w-full mt-2 bg-violet-100 text-violet-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-200 transition-colors"
+                  className="w-full h-11 mt-2 bg-violet-100 text-violet-700 rounded-xl text-sm font-semibold hover:bg-violet-200 transition-colors"
                 >
                   로그아웃
                 </button>
