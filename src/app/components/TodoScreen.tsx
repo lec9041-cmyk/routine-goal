@@ -37,7 +37,7 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
   const defaultTodoCategory = todoCategories[0] ?? "업무";
   
   const [filter, setFilter] = useState<"all" | "today" | "upcoming">("today");
-  const [viewMode, setViewMode] = useState<"default" | "category">("default");
+  const [todoViewMode, setTodoViewMode] = useState<"flat" | "category">("flat");
   const [newSubTaskId, setNewSubTaskId] = useState<string | null>(null);
   const [newSubTaskText, setNewSubTaskText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -262,29 +262,26 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
     return true;
   });
 
-  const categoryGroupedTodos = (() => {
-    const categoryMap = new Map<string, Todo[]>();
-
-    filteredTodos.forEach((todo) => {
-      const categoryName = todo.category || "미분류";
-      if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, []);
+  const groupedTodos = (() => {
+    const grouped = filteredTodos.reduce<Record<string, Todo[]>>((acc, todo) => {
+      const key = todo.category || "기타";
+      if (!acc[key]) {
+        acc[key] = [];
       }
-      categoryMap.get(categoryName)!.push(todo);
+      acc[key].push(todo);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).sort(([a], [b]) => {
+      const indexA = todoCategories.indexOf(a);
+      const indexB = todoCategories.indexOf(b);
+      const normalizedA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+      const normalizedB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+      if (normalizedA !== normalizedB) {
+        return normalizedA - normalizedB;
+      }
+      return a.localeCompare(b, "ko");
     });
-
-    const knownCategorySections = todoCategories
-      .filter((category) => categoryMap.has(category))
-      .map((category) => ({
-        category,
-        todos: categoryMap.get(category)!,
-      }));
-
-    const unknownCategorySections = Array.from(categoryMap.entries())
-      .filter(([category]) => !todoCategories.includes(category))
-      .map(([category, todos]) => ({ category, todos }));
-
-    return [...knownCategorySections, ...unknownCategorySections];
   })();
 
   const totalCount = filteredTodos.length;
@@ -611,6 +608,29 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
           </div>
         </div>
 
+        <div className="mt-2 flex items-center gap-1.5">
+          <button
+            onClick={() => setTodoViewMode("flat")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+              todoViewMode === "flat"
+                ? "bg-gray-900 text-white shadow-sm"
+                : "bg-white/60 text-gray-600 hover:bg-white/80"
+            }`}
+          >
+            기본 보기
+          </button>
+          <button
+            onClick={() => setTodoViewMode("category")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+              todoViewMode === "category"
+                ? "bg-gray-900 text-white shadow-sm"
+                : "bg-white/60 text-gray-600 hover:bg-white/80"
+            }`}
+          >
+            카테고리 보기
+          </button>
+        </div>
+
         {/* Progress Bar */}
         {totalCount > 0 && (
           <div className="mt-2.5">
@@ -671,20 +691,479 @@ export function TodoScreen({ onNavigate, shouldOpenAddModal }: TodoScreenProps) 
 
       {/* Todo List */}
       <div className="px-4">
-        {viewMode === "default" ? (
-          <div className="space-y-1.5">{filteredTodos.map((todo) => renderTodoCard(todo))}</div>
+        {todoViewMode === "flat" ? (
+          <div className="space-y-1.5">
+            {filteredTodos.map((todo) => {
+              const hasSubTasks = todo.subTasks && todo.subTasks.length > 0;
+              const completedSubTasks = todo.subTasks?.filter(st => st.completed).length || 0;
+              const totalSubTasks = todo.subTasks?.length || 0;
+
+              return (
+                <div key={todo.id} className={`relative ${showDeleteMenu === todo.id ? "z-40" : "z-10"}`}>
+                  {/* Main Todo */}
+                  <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 hover:bg-white/90 transition-all shadow-sm overflow-visible">
+                    <div className="p-3">
+                      <div className="flex items-start gap-2.5">
+                        <button
+                          onClick={() => toggleTodo(todo.id)}
+                          className="mt-0.5 flex-shrink-0"
+                        >
+                          {todo.completed ? (
+                            <CheckCircle2 className="w-4.5 h-4.5 text-blue-500" />
+                          ) : (
+                            <Circle className="w-4.5 h-4.5 text-gray-300 hover:text-blue-500 transition-colors" />
+                          )}
+                        </button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h3
+                              className={`text-[13.5px] font-medium flex-1 leading-snug ${
+                                todo.completed
+                                  ? "text-gray-400 line-through"
+                                  : "text-gray-900"
+                              }`}
+                            >
+                              {todo.title}
+                            </h3>
+                            {!todo.completed && (
+                              <div className={`w-1.5 h-1.5 rounded-full ${priorityColors[todo.priority]} mt-1.5 flex-shrink-0`} />
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md font-medium">
+                              {todo.category}
+                            </span>
+                            {todo.projectId && (() => {
+                              const project = projects.find(p => p.id === todo.projectId);
+                              if (project) {
+                                return (
+                                  <span className={`text-[10px] text-gray-700 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5 ${project.color}`}>
+                                    <Folder className="w-2.5 h-2.5" />
+                                    {project.title}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {todo.time && (
+                              <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
+                                <Clock className="w-2.5 h-2.5" />
+                                {todo.time}
+                              </span>
+                            )}
+                            {todo.time && todo.notificationEnabled && (
+                              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
+                                <Bell className="w-2.5 h-2.5" />
+                                알림 ON
+                              </span>
+                            )}
+                            {hasSubTasks && (
+                              <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md font-semibold">
+                                {completedSubTasks}/{totalSubTasks}
+                              </span>
+                            )}
+                            {!todo.completed && (
+                              <button
+                                onClick={() => {
+                                  setShowAddSubTask(showAddSubTask === todo.id ? null : todo.id);
+                                  setNewSubTaskId(null);
+                                }}
+                                className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md font-semibold hover:bg-purple-100 transition-colors flex items-center gap-0.5"
+                              >
+                                <Plus className="w-2.5 h-2.5" />
+                                서브
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 flex-shrink-0 relative overflow-visible">
+                          {hasSubTasks && (
+                            <button
+                              onClick={() => toggleExpand(todo.id)}
+                              className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                            >
+                              {todo.expanded ? (
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
+                              ) : (
+                                <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                              )}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setShowDeleteMenu(showDeleteMenu === todo.id ? null : todo.id)}
+                            className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5 text-gray-600" />
+                          </button>
+                          
+                          {/* Delete Menu */}
+                          {showDeleteMenu === todo.id && (
+                            <div className="absolute right-0 top-8 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[120] min-w-[100px]">
+                              <button
+                                onClick={() => handleEditTodo(todo)}
+                                className="w-full px-3 py-1.5 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                수정
+                              </button>
+                              <button
+                                onClick={() => deleteTodo(todo.id)}
+                                className="w-full px-3 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                삭제
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Add SubTask Input - 카드 하단 */}
+                      {showAddSubTask === todo.id && !todo.completed && (
+                        <div className="pt-2.5 mt-2 border-t border-gray-100">
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={newSubTaskText}
+                              onChange={(e) => setNewSubTaskText(e.target.value)}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  addSubTask(todo.id);
+                                  setShowAddSubTask(null);
+                                }
+                              }}
+                              placeholder="서브태스크 입력..."
+                              autoFocus
+                              className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-purple-500"
+                            />
+                            <button
+                              onClick={() => {
+                                addSubTask(todo.id);
+                                setShowAddSubTask(null);
+                              }}
+                              className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[11px] font-medium"
+                            >
+                              추가
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowAddSubTask(null);
+                                setNewSubTaskText("");
+                              }}
+                              className="px-2.5 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px]"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SubTasks */}
+                    {todo.expanded && hasSubTasks && (
+                      <div className="ml-7 mr-3 mb-3 pt-1 space-y-1.5">
+                        {todo.subTasks!.map((subTask) => (
+                          <div
+                            key={subTask.id}
+                            className="bg-white/60 rounded-lg p-2 flex items-center gap-2 border border-white/80"
+                          >
+                            <button
+                              onClick={() => toggleSubTask(todo.id, subTask.id)}
+                              className="flex-shrink-0"
+                            >
+                              {subTask.completed ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
+                              ) : (
+                                <Circle className="w-3.5 h-3.5 text-gray-300" />
+                              )}
+                            </button>
+                            <p
+                              className={`text-[12px] flex-1 ${
+                                subTask.completed
+                                  ? "text-gray-400 line-through"
+                                  : "text-gray-700"
+                              }`}
+                            >
+                              {subTask.title}
+                            </p>
+                          </div>
+                        ))}
+                        {newSubTaskId === todo.id ? (
+                          <div className="flex gap-1">
+                            <input
+                              type="text"
+                              value={newSubTaskText}
+                              onChange={(e) => setNewSubTaskText(e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && addSubTask(todo.id)}
+                              placeholder="서브태스크 입력..."
+                              autoFocus
+                              className="flex-1 px-2 py-1 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500"
+                            />
+                            <button
+                              onClick={() => addSubTask(todo.id)}
+                              className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px]"
+                            >
+                              추가
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setNewSubTaskId(todo.id)}
+                            className="w-full py-1.5 text-[11px] text-gray-500 hover:text-blue-600 flex items-center justify-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" />
+                            서브태스크 추가
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-[11px] text-gray-500 px-0.5">완료 항목은 각 카테고리 안에서 미완료와 함께 표시됩니다.</p>
-            {categoryGroupedTodos.map(({ category, todos: groupedTodos }) => (
-              <section key={category} className="bg-white/35 rounded-xl border border-white/70 p-2.5">
-                <div className="flex items-center justify-between mb-2 px-0.5">
-                  <h3 className="text-[12.5px] font-bold text-gray-800">{category}</h3>
-                  <span className="text-[11px] font-semibold text-gray-500">{groupedTodos.length}개</span>
+            {groupedTodos.map(([category, todosInCategory]) => (
+              <section key={category} className="space-y-1.5">
+                <div className="px-1 flex items-center justify-between">
+                  <h3 className="text-[12px] font-bold text-gray-700">{category}</h3>
+                  <span className="text-[11px] font-semibold text-gray-500">{todosInCategory.length}개</span>
                 </div>
-                <div className="space-y-1.5">
-                  {groupedTodos.map((todo) => renderTodoCard(todo))}
+                {todosInCategory.map((todo) => {
+            const hasSubTasks = todo.subTasks && todo.subTasks.length > 0;
+            const completedSubTasks = todo.subTasks?.filter(st => st.completed).length || 0;
+            const totalSubTasks = todo.subTasks?.length || 0;
+
+            return (
+              <div key={todo.id} className={`relative ${showDeleteMenu === todo.id ? "z-40" : "z-10"}`}>
+                {/* Main Todo */}
+                <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-white/80 hover:bg-white/90 transition-all shadow-sm overflow-visible">
+                  <div className="p-3">
+                    <div className="flex items-start gap-2.5">
+                      <button
+                        onClick={() => toggleTodo(todo.id)}
+                        className="mt-0.5 flex-shrink-0"
+                      >
+                        {todo.completed ? (
+                          <CheckCircle2 className="w-4.5 h-4.5 text-blue-500" />
+                        ) : (
+                          <Circle className="w-4.5 h-4.5 text-gray-300 hover:text-blue-500 transition-colors" />
+                        )}
+                      </button>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3
+                            className={`text-[13.5px] font-medium flex-1 leading-snug ${
+                              todo.completed
+                                ? "text-gray-400 line-through"
+                                : "text-gray-900"
+                            }`}
+                          >
+                            {todo.title}
+                          </h3>
+                          {!todo.completed && (
+                            <div className={`w-1.5 h-1.5 rounded-full ${priorityColors[todo.priority]} mt-1.5 flex-shrink-0`} />
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md font-medium">
+                            {todo.category}
+                          </span>
+                          {todo.projectId && (() => {
+                            const project = projects.find(p => p.id === todo.projectId);
+                            if (project) {
+                              return (
+                                <span className={`text-[10px] text-gray-700 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5 ${project.color}`}>
+                                  <Folder className="w-2.5 h-2.5" />
+                                  {project.title}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                          {todo.time && (
+                            <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {todo.time}
+                            </span>
+                          )}
+                          {todo.time && todo.notificationEnabled && (
+                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md font-semibold flex items-center gap-0.5">
+                              <Bell className="w-2.5 h-2.5" />
+                              알림 ON
+                            </span>
+                          )}
+                          {hasSubTasks && (
+                            <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md font-semibold">
+                              {completedSubTasks}/{totalSubTasks}
+                            </span>
+                          )}
+                          {!todo.completed && (
+                            <button
+                              onClick={() => {
+                                setShowAddSubTask(showAddSubTask === todo.id ? null : todo.id);
+                                setNewSubTaskId(null);
+                              }}
+                              className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-md font-semibold hover:bg-purple-100 transition-colors flex items-center gap-0.5"
+                            >
+                              <Plus className="w-2.5 h-2.5" />
+                              서브
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1 flex-shrink-0 relative overflow-visible">
+                        {hasSubTasks && (
+                          <button
+                            onClick={() => toggleExpand(todo.id)}
+                            className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                          >
+                            {todo.expanded ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+                            )}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowDeleteMenu(showDeleteMenu === todo.id ? null : todo.id)}
+                          className="w-6 h-6 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
+                        
+                        {/* Delete Menu */}
+                        {showDeleteMenu === todo.id && (
+                          <div className="absolute right-0 top-8 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[120] min-w-[100px]">
+                            <button
+                              onClick={() => handleEditTodo(todo)}
+                              className="w-full px-3 py-1.5 text-left text-[12px] text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                              수정
+                            </button>
+                            <button
+                              onClick={() => deleteTodo(todo.id)}
+                              className="w-full px-3 py-1.5 text-left text-[12px] text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              삭제
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Add SubTask Input - 카드 하단 */}
+                    {showAddSubTask === todo.id && !todo.completed && (
+                      <div className="pt-2.5 mt-2 border-t border-gray-100">
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={newSubTaskText}
+                            onChange={(e) => setNewSubTaskText(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                addSubTask(todo.id);
+                                setShowAddSubTask(null);
+                              }
+                            }}
+                            placeholder="서브태스크 입력..."
+                            autoFocus
+                            className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-purple-500"
+                          />
+                          <button
+                            onClick={() => {
+                              addSubTask(todo.id);
+                              setShowAddSubTask(null);
+                            }}
+                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-[11px] font-medium"
+                          >
+                            추가
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowAddSubTask(null);
+                              setNewSubTaskText("");
+                            }}
+                            className="px-2.5 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px]"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SubTasks */}
+                  {todo.expanded && hasSubTasks && (
+                    <div className="ml-7 mr-3 mb-3 pt-1 space-y-1.5">
+                      {todo.subTasks!.map((subTask) => (
+                        <div
+                          key={subTask.id}
+                          className="bg-white/60 rounded-lg p-2 flex items-center gap-2 border border-white/80"
+                        >
+                          <button
+                            onClick={() => toggleSubTask(todo.id, subTask.id)}
+                            className="flex-shrink-0"
+                          >
+                            {subTask.completed ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
+                            ) : (
+                              <Circle className="w-3.5 h-3.5 text-gray-300" />
+                            )}
+                          </button>
+                          <p
+                            className={`text-[12px] flex-1 ${
+                              subTask.completed
+                                ? "text-gray-400 line-through"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {subTask.title}
+                          </p>
+                        </div>
+                      ))}
+                      {newSubTaskId === todo.id ? (
+                        <div className="flex gap-1">
+                          <input
+                            type="text"
+                            value={newSubTaskText}
+                            onChange={(e) => setNewSubTaskText(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addSubTask(todo.id)}
+                            placeholder="서브태스크 입력..."
+                            autoFocus
+                            className="flex-1 px-2 py-1 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            onClick={() => addSubTask(todo.id)}
+                            className="px-2 py-1 bg-blue-500 text-white rounded-lg text-[11px]"
+                          >
+                            추가
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setNewSubTaskId(todo.id)}
+                          className="w-full py-1.5 text-[11px] text-gray-500 hover:text-blue-600 flex items-center justify-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          서브태스크 추가
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
+              </div>
+            );
+                  })}
               </section>
             ))}
           </div>
