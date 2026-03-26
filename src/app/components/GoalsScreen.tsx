@@ -562,18 +562,18 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       )}
 
       {/* Stats Overview */}
-      <div className="px-5 py-6">
-        <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-6 shadow-sm mb-5">
-          <div className="flex items-center justify-between mb-4">
+      <div className="px-5 py-5">
+        <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl p-4 shadow-sm mb-4">
+          <div className="flex items-center justify-between mb-2.5">
             <div>
-              <p className="text-purple-600 text-[13px] mb-1 font-medium">진행중인 목표</p>
-              <p className="text-purple-900 text-3xl font-bold">{goals.length}개</p>
+              <p className="text-purple-600 text-[12px] mb-0.5 font-medium">진행중인 목표</p>
+              <p className="text-purple-900 text-[34px] leading-none font-bold">{goals.length}개</p>
             </div>
-            <div className="w-14 h-14 rounded-xl bg-white/60 flex items-center justify-center">
-              <TrendingUp className="w-7 h-7 text-purple-700" />
+            <div className="w-12 h-12 rounded-xl bg-white/60 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-purple-700" />
             </div>
           </div>
-          <p className="text-purple-700 text-[12px]">
+          <p className="text-purple-700 text-[11px] leading-snug">
             목표와 루틴을 직접 연결하여 체계적으로 관리하세요 🎯
           </p>
         </div>
