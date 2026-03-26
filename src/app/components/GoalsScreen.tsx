@@ -139,6 +139,15 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
     if (Number.isNaN(parsed)) return "";
     return String(Math.min(getMaxTargetCount(frequency), parsed));
   };
+  const shouldUseCountTarget = (frequency: "daily" | "weekly" | "monthly", trackingType: "count" | "days") =>
+    frequency === "daily" || trackingType === "count";
+  const requiresSelectedDays = (frequency: "daily" | "weekly" | "monthly", trackingType: "count" | "days") =>
+    (frequency === "weekly" || frequency === "monthly") && trackingType === "days";
+  const parseValidTargetCount = (targetCount: string, frequency: "daily" | "weekly" | "monthly") => {
+    const parsed = Number.parseInt(targetCount, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) return null;
+    return Math.min(getMaxTargetCount(frequency), parsed);
+  };
 
   const toggleExpand = (goalId: string) => {
     const goal = goals.find(g => g.id === goalId);
@@ -205,9 +214,13 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
   const handleAddRoutine = () => {
     if (!newRoutine.title.trim() || !selectedGoalId) return;
-    const parsedTargetCount = Number.parseInt(newRoutine.targetCount, 10);
-    if (Number.isNaN(parsedTargetCount) || parsedTargetCount <= 0) return;
-    const nextTargetCount = Math.min(getMaxTargetCount(newRoutine.frequency), parsedTargetCount);
+    const needsTargetCount = shouldUseCountTarget(newRoutine.frequency, newRoutine.trackingType);
+    const needsSelectedDays = requiresSelectedDays(newRoutine.frequency, newRoutine.trackingType);
+    const nextTargetCount = needsTargetCount
+      ? parseValidTargetCount(newRoutine.targetCount, newRoutine.frequency)
+      : 1;
+    if (needsTargetCount && nextTargetCount === null) return;
+    if (needsSelectedDays && newRoutine.selectedDays.length === 0) return;
 
     // Create routine object
     const routine = {
@@ -215,7 +228,7 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       title: newRoutine.title,
       icon: newRoutine.icon,
       frequency: newRoutine.frequency,
-      targetCount: nextTargetCount,
+      targetCount: nextTargetCount ?? 1,
       currentCount: 0,
       completedDates: [],
       trackingType: newRoutine.trackingType,
@@ -285,15 +298,20 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
   const saveRoutineEdit = () => {
     if (!editingRoutineId || !editingRoutineForm.title.trim()) return;
-    const parsedTargetCount = Number.parseInt(editingRoutineForm.targetCount, 10);
-    if (Number.isNaN(parsedTargetCount) || parsedTargetCount <= 0) return;
-    const nextTargetCount = Math.min(getMaxTargetCount(editingRoutineForm.frequency), parsedTargetCount);
+    const needsTargetCount = shouldUseCountTarget(editingRoutineForm.frequency, editingRoutineForm.trackingType);
+    const needsSelectedDays = requiresSelectedDays(editingRoutineForm.frequency, editingRoutineForm.trackingType);
+    const nextTargetCount = needsTargetCount
+      ? parseValidTargetCount(editingRoutineForm.targetCount, editingRoutineForm.frequency)
+      : 1;
+    if (needsTargetCount && nextTargetCount === null) return;
+    if (needsSelectedDays && editingRoutineForm.selectedDays.length === 0) return;
+
     updateRoutine(editingRoutineId, {
       title: editingRoutineForm.title.trim(),
       icon: editingRoutineForm.icon,
       frequency: editingRoutineForm.frequency,
       trackingType: editingRoutineForm.trackingType,
-      targetCount: nextTargetCount,
+      targetCount: nextTargetCount ?? 1,
       selectedDays: editingRoutineForm.selectedDays,
     });
     setShowEditRoutineModal(false);
@@ -1082,7 +1100,14 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
                 <button
                   onClick={handleAddRoutine}
-                  disabled={!newRoutine.title.trim() || !newRoutine.targetCount.trim()}
+                  disabled={
+                    !newRoutine.title.trim() ||
+                    !selectedGoalId ||
+                    (shouldUseCountTarget(newRoutine.frequency, newRoutine.trackingType) &&
+                      parseValidTargetCount(newRoutine.targetCount, newRoutine.frequency) === null) ||
+                    (requiresSelectedDays(newRoutine.frequency, newRoutine.trackingType) &&
+                      newRoutine.selectedDays.length === 0)
+                  }
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   추가하기
@@ -1395,9 +1420,78 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                     ))}
                   </div>
                 </div>
+
+                {(editingRoutineForm.frequency === "weekly" || editingRoutineForm.frequency === "monthly") && (
+                  <div>
+                    <label className="text-[13px] font-medium text-gray-700 mb-2 block">추적 방식</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingRoutineForm({ ...editingRoutineForm, trackingType: "count" })}
+                        className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                          editingRoutineForm.trackingType === "count"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        횟수 기반
+                      </button>
+                      <button
+                        onClick={() => setEditingRoutineForm({ ...editingRoutineForm, trackingType: "days" })}
+                        className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                          editingRoutineForm.trackingType === "days"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        요일 지정
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(editingRoutineForm.frequency === "weekly" || editingRoutineForm.frequency === "monthly") &&
+                  editingRoutineForm.trackingType === "days" && (
+                    <div>
+                      <label className="text-[13px] font-medium text-gray-700 mb-2 block">요일 선택</label>
+                      <div className="flex gap-1">
+                        {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => {
+                          const isSelected = editingRoutineForm.selectedDays.includes(index);
+                          return (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                const days = isSelected
+                                  ? editingRoutineForm.selectedDays.filter((d) => d !== index)
+                                  : [...editingRoutineForm.selectedDays, index].sort();
+                                setEditingRoutineForm({ ...editingRoutineForm, selectedDays: days });
+                              }}
+                              className={`flex-1 aspect-square rounded-lg text-[12px] font-semibold transition-all ${
+                                isSelected
+                                  ? index === 0
+                                    ? "bg-red-500 text-white"
+                                    : index === 6
+                                      ? "bg-blue-500 text-white"
+                                      : "bg-purple-500 text-white"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                 {(editingRoutineForm.frequency === "daily" || editingRoutineForm.trackingType === "count") && (
                   <div>
-                    <label className="text-[13px] font-medium text-gray-700 mb-2 block">목표 횟수</label>
+                    <label className="text-[13px] font-medium text-gray-700 mb-2 block">
+                      {editingRoutineForm.frequency === "daily"
+                        ? "일일 목표 횟수"
+                        : editingRoutineForm.frequency === "weekly"
+                          ? "주간 목표 횟수"
+                          : "월간 목표 횟수"}
+                    </label>
                     <input
                       type="number"
                       min="1"
@@ -1428,7 +1522,13 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
                 </button>
                 <button
                   onClick={saveRoutineEdit}
-                  disabled={!editingRoutineForm.title.trim() || !editingRoutineForm.targetCount.trim()}
+                  disabled={
+                    !editingRoutineForm.title.trim() ||
+                    (shouldUseCountTarget(editingRoutineForm.frequency, editingRoutineForm.trackingType) &&
+                      parseValidTargetCount(editingRoutineForm.targetCount, editingRoutineForm.frequency) === null) ||
+                    (requiresSelectedDays(editingRoutineForm.frequency, editingRoutineForm.trackingType) &&
+                      editingRoutineForm.selectedDays.length === 0)
+                  }
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-400 to-purple-500 text-white font-medium text-[14px] hover:from-purple-500 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   수정하기
