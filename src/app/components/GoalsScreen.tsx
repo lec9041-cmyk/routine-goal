@@ -750,8 +750,14 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       {/* Add Goal Modal */}
       {showAddModal && (
         <ModalPortal>
-          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] pb-0 shadow-2xl animate-slide-up flex flex-col overflow-hidden">
+          <div
+            className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => setShowAddModal(false)}
+          >
+            <div
+              className="modal-sheet bg-white rounded-t-3xl w-full max-w-md h-[min(90dvh,760px)] pb-0 shadow-2xl animate-slide-up flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="shrink-0 px-5 pt-4 pb-4 border-b border-gray-100">
               {/* Modal Header */}
               <div className="flex items-center justify-between">
@@ -884,8 +890,18 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       {/* Add Routine Modal */}
       {showAddRoutineModal && (
         <ModalPortal>
-          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+          <div
+            className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => {
+              setShowAddRoutineModal(false);
+              setSelectedGoalId("");
+              setSelectedCellIndex(-1);
+            }}
+          >
+            <div
+              className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="px-5 pt-4 pb-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-5">
@@ -1080,8 +1096,18 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
       {showCategoryManage && (
         <ModalPortal>
-          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+          <div
+            className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => {
+              setShowCategoryManage(false);
+              setShowCategoryInput(false);
+              setEditingCategory(null);
+            }}
+          >
+            <div
+              className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="px-5 pt-4 pb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-800">목표 카테고리 관리</h2>
@@ -1189,8 +1215,17 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
 
       {showEditGoalModal && editingGoal && (
         <ModalPortal>
-          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+          <div
+            className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => {
+              setShowEditGoalModal(false);
+              setEditingGoal(null);
+            }}
+          >
+            <div
+              className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="px-5 pt-4 pb-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-gray-800">목표 수정</h2>
@@ -1272,8 +1307,17 @@ export function GoalsScreen({ onNavigate, shouldOpenAddModal, hideHeader }: Goal
       {/* Edit Routine Modal */}
       {showEditRoutineModal && editingRoutineId && (
         <ModalPortal>
-          <div className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center">
-            <div className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up">
+          <div
+            className="modal-backdrop bg-black/30 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => {
+              setShowEditRoutineModal(false);
+              setEditingRoutineId(null);
+            }}
+          >
+            <div
+              className="modal-sheet bg-white rounded-t-3xl w-full max-w-md shadow-2xl animate-slide-up"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="px-5 pt-4 pb-6">
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-5">
