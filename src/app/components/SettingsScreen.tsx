@@ -156,20 +156,26 @@ export function SettingsScreen() {
       </div>
 
       {isAuthModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
+        <div className="fixed inset-0 bg-slate-900/28 backdrop-blur-[1px] flex items-end sm:items-center justify-center p-4 z-50">
+          <div className="w-full max-w-md bg-gradient-to-b from-white to-violet-50/55 rounded-2xl shadow-[0_8px_24px_rgba(15,23,42,0.14)] border border-violet-100 p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">계정 생성 / 연동</h2>
-              <button type="button" onClick={() => setIsAuthModalOpen(false)} className="p-1 text-gray-500">
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(false)}
+                className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 p-1 rounded-xl bg-violet-100/60 border border-violet-100">
               <button
                 type="button"
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-                  authMode === "signin" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  authMode === "signin"
+                    ? "bg-violet-500 text-white shadow-sm"
+                    : "bg-transparent text-gray-600 hover:bg-white/70"
                 }`}
                 onClick={() => setAuthMode("signin")}
               >
@@ -177,8 +183,10 @@ export function SettingsScreen() {
               </button>
               <button
                 type="button"
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-                  authMode === "signup" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  authMode === "signup"
+                    ? "bg-violet-500 text-white shadow-sm"
+                    : "bg-transparent text-gray-600 hover:bg-white/70"
                 }`}
                 onClick={() => setAuthMode("signup")}
               >
@@ -191,7 +199,7 @@ export function SettingsScreen() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm mb-3"
+              className="w-full rounded-xl border border-violet-200 bg-white/80 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
               placeholder="you@example.com"
             />
 
@@ -200,17 +208,17 @@ export function SettingsScreen() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm mb-4"
+              className="w-full rounded-xl border border-violet-200 bg-white/80 px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-300"
               placeholder="6자 이상 입력"
             />
 
-            {authMessage && <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-2 mb-3">{authMessage}</p>}
+            {authMessage && <p className="text-sm text-gray-700 bg-violet-50 border border-violet-100 rounded-xl p-2 mb-3">{authMessage}</p>}
 
             <button
               type="button"
               onClick={handleAuthSubmit}
               disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-semibold disabled:opacity-60"
+              className="w-full bg-violet-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-600 transition-colors disabled:opacity-60"
             >
               {isSubmitting ? "처리 중..." : authMode === "signin" ? "로그인" : "회원가입"}
             </button>
@@ -219,7 +227,7 @@ export function SettingsScreen() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full mt-2 bg-gray-200 text-gray-800 rounded-lg py-2.5 text-sm font-semibold"
+                className="w-full mt-2 bg-violet-100 text-violet-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-200 transition-colors"
               >
                 로그아웃
               </button>
