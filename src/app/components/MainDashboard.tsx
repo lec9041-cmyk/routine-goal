@@ -20,10 +20,12 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const [quickAddText, setQuickAddText] = useState("");
   const [quickAddError, setQuickAddError] = useState("");
   const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [showMonthlyCalendar, setShowMonthlyCalendar] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "todo" | "routine">("all");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [weekOffset, setWeekOffset] = useState(0); // 주 단위 오프셋
+  const [displayMonth, setDisplayMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
   useEffect(() => {
     if (!showQuickAdd) {
@@ -190,6 +192,31 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const surfaceCardClass = "bg-white/75 backdrop-blur-sm rounded-2xl border border-white/80 shadow-sm";
   const itemCardClass = "bg-white/80 backdrop-blur-sm rounded-2xl border border-white/80 shadow-sm";
   const filterChipBaseClass = "h-9 px-3.5 rounded-xl text-[12px] font-semibold transition-all";
+  const monthDayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const getStartOfWeek = (date: Date) => {
+    const weekStart = new Date(date);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    return weekStart;
+  };
+
+  const getWeekOffsetFromToday = (date: Date) => {
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+    const diff = getStartOfWeek(date).getTime() - getStartOfWeek(today).getTime();
+    return Math.round(diff / oneWeekMs);
+  };
+
+  const buildMonthCalendar = (monthBase: Date) => {
+    const startDate = new Date(monthBase.getFullYear(), monthBase.getMonth(), 1);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      return date;
+    });
+  };
 
   // 주간 날짜 생성 (weekOffset 적용)
   const getWeekDates = () => {
@@ -211,6 +238,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   };
 
   const weekDates = getWeekDates();
+  const monthDates = buildMonthCalendar(displayMonth);
 
   // 이전 주로 이동
   const previousWeek = () => {
@@ -226,6 +254,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const goToToday = () => {
     setWeekOffset(0);
     setSelectedDate(today);
+    setDisplayMonth(new Date(today.getFullYear(), today.getMonth(), 1));
   };
 
   const renderRoutineListItem = (routine: (typeof selectedDateRoutines)[number], tone: "purple" | "indigo" = "purple") => {
@@ -336,7 +365,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           {weekDates.map((date, index) => {
             const isToday = isSameDay(date, today);
             const isSelected = isSameDay(date, selectedDate);
-            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
             const dayOfWeek = date.getDay();
             
             return (
@@ -356,7 +384,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 <span className={`text-[9px] font-semibold ${ 
                   isSelected ? 'text-white/70' : dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : 'text-gray-400'
                 }`}>
-                  {dayNames[dayOfWeek]}
+                  {monthDayNames[dayOfWeek]}
                 </span>
                 <span className={`text-[14px] font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
                   {date.getDate()}
@@ -379,12 +407,86 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
             오늘
           </button>
           <button
+            onClick={() => {
+              setDisplayMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+              setShowMonthlyCalendar((prev) => !prev);
+            }}
+            className="text-[11px] text-indigo-600 font-semibold hover:text-indigo-700 transition-colors px-2"
+          >
+            월간 달력
+          </button>
+          <button
             onClick={nextWeek}
             className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center hover:bg-white/90 transition-colors"
           >
             <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
           </button>
         </div>
+
+        {showMonthlyCalendar && (
+          <div className="mt-3 rounded-xl bg-white/80 border border-white/90 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <button
+                onClick={() => setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() - 1, 1))}
+                className="w-7 h-7 rounded-full bg-white flex items-center justify-center hover:bg-gray-50"
+                aria-label="이전 달"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+              <p className="text-[12px] font-bold text-gray-800">
+                {displayMonth.getFullYear()}년 {displayMonth.getMonth() + 1}월
+              </p>
+              <button
+                onClick={() => setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1))}
+                className="w-7 h-7 rounded-full bg-white flex items-center justify-center hover:bg-gray-50"
+                aria-label="다음 달"
+              >
+                <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {monthDayNames.map((name, index) => (
+                <div
+                  key={name}
+                  className={`text-center text-[10px] font-semibold ${index === 0 ? "text-red-400" : index === 6 ? "text-blue-400" : "text-gray-500"}`}
+                >
+                  {name}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {monthDates.map((date, index) => {
+                const isCurrentMonth = date.getMonth() === displayMonth.getMonth();
+                const isSelected = isSameDay(date, selectedDate);
+                const isToday = isSameDay(date, today);
+
+                return (
+                  <button
+                    key={`${date.toISOString()}-${index}`}
+                    onClick={() => {
+                      setSelectedDate(date);
+                      setWeekOffset(getWeekOffsetFromToday(date));
+                      setShowMonthlyCalendar(false);
+                    }}
+                    className={`h-8 rounded-lg text-[11px] font-medium transition-colors ${
+                      isSelected
+                        ? "bg-blue-500 text-white"
+                        : isToday
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : isCurrentMonth
+                        ? "text-gray-800 hover:bg-gray-100"
+                        : "text-gray-400 hover:bg-gray-50"
+                    }`}
+                  >
+                    {date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
