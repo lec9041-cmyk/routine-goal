@@ -69,11 +69,11 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
     }
 
     if (isWeeklyCountingRoutine(routine)) {
-      return { matchesToday: true, reason: "weekly count routine (주간 n회, 오늘 실행 가능)" };
+      return { matchesToday: false, reason: "weekly count routine (주간 섹션에서만 표시)" };
     }
 
     if (isMonthlyCountingRoutine(routine)) {
-      return { matchesToday: true, reason: "monthly count routine (월간 n회, 오늘 실행 가능)" };
+      return { matchesToday: false, reason: "monthly count routine (월간 섹션에서만 표시)" };
     }
 
     if (routine.frequency === "weekly") {
@@ -499,7 +499,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
                     return (
                       <p className="text-[11px] text-gray-500 font-medium truncate mb-0.5">
-                        목표 · {project.title}
+                        프로젝트 : {project.title}
                       </p>
                     );
                   })()}
@@ -544,7 +544,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
 
                     return (
                       <p className="text-[11px] text-gray-400 font-medium truncate mb-0.5 line-through">
-                        목표 · {project.title}
+                        프로젝트 : {project.title}
                       </p>
                     );
                   })()}
