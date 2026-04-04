@@ -20,7 +20,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const [quickAddText, setQuickAddText] = useState("");
   const [quickAddError, setQuickAddError] = useState("");
   const [isQuickAdding, setIsQuickAdding] = useState(false);
-  const [showMonthlyCalendar, setShowMonthlyCalendar] = useState(false);
+  const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [activeFilter, setActiveFilter] = useState<"all" | "todo" | "routine">("all");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
@@ -361,69 +361,71 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
       {/* 주간 캘린더 - 더 컴팩트하게 */}
       <div className="px-4 mt-4">
         <div className={`${surfaceCardClass} p-3`}>
-        <div className="flex gap-1.5 justify-between">
-          {weekDates.map((date, index) => {
-            const isToday = isSameDay(date, today);
-            const isSelected = isSameDay(date, selectedDate);
-            const dayOfWeek = date.getDay();
-            
-            return (
-              <button
-                key={index}
-                onClick={() => {
-                  setSelectedDate(date);
-                }}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl transition-all ${
-                  isSelected 
-                    ? 'bg-blue-500 text-white shadow-sm' 
-                    : isToday
-                    ? 'bg-white/70 text-blue-600 border border-blue-200/50'
-                    : 'bg-white/50 text-gray-700'
-                }`}
-              >
-                <span className={`text-[9px] font-semibold ${ 
-                  isSelected ? 'text-white/70' : dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : 'text-gray-400'
-                }`}>
-                  {monthDayNames[dayOfWeek]}
-                </span>
-                <span className={`text-[14px] font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                  {date.getDate()}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex items-center justify-center gap-2 mt-2">
-          <button
-            onClick={previousWeek}
-            className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center hover:bg-white/90 transition-colors"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
-          </button>
-          <button
-            onClick={goToToday}
-            className="text-[11px] text-gray-600 font-semibold hover:text-gray-800 transition-colors px-2"
-          >
-            오늘
-          </button>
-          <button
-            onClick={() => {
-              setDisplayMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-              setShowMonthlyCalendar((prev) => !prev);
-            }}
-            className="text-[11px] text-indigo-600 font-semibold hover:text-indigo-700 transition-colors px-2"
-          >
-            월간 달력
-          </button>
-          <button
-            onClick={nextWeek}
-            className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center hover:bg-white/90 transition-colors"
-          >
-            <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
-          </button>
-        </div>
+        {calendarView === "week" ? (
+          <>
+            <div className="flex gap-1.5 justify-between">
+              {weekDates.map((date, index) => {
+                const isToday = isSameDay(date, today);
+                const isSelected = isSameDay(date, selectedDate);
+                const dayOfWeek = date.getDay();
 
-        {showMonthlyCalendar && (
+                return (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setSelectedDate(date);
+                    }}
+                    className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl transition-all ${
+                      isSelected
+                        ? 'bg-blue-500 text-white shadow-sm'
+                        : isToday
+                        ? 'bg-white/70 text-blue-600 border border-blue-200/50'
+                        : 'bg-white/50 text-gray-700'
+                    }`}
+                  >
+                    <span className={`text-[9px] font-semibold ${
+                      isSelected ? 'text-white/70' : dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : 'text-gray-400'
+                    }`}>
+                      {monthDayNames[dayOfWeek]}
+                    </span>
+                    <span className={`text-[14px] font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                      {date.getDate()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <button
+                onClick={previousWeek}
+                className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center hover:bg-white/90 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+              <button
+                onClick={goToToday}
+                className="text-[11px] text-gray-600 font-semibold hover:text-gray-800 transition-colors px-2"
+              >
+                오늘
+              </button>
+              <button
+                onClick={() => {
+                  setDisplayMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+                  setCalendarView("month");
+                }}
+                className="text-[11px] text-indigo-600 font-semibold hover:text-indigo-700 transition-colors px-2"
+              >
+                월간 보기
+              </button>
+              <button
+                onClick={nextWeek}
+                className="w-7 h-7 rounded-full bg-white/70 flex items-center justify-center hover:bg-white/90 transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+            </div>
+          </>
+        ) : (
           <div className="mt-3 rounded-xl bg-white/80 border border-white/90 p-3">
             <div className="flex items-center justify-between mb-2">
               <button
@@ -442,6 +444,20 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                 aria-label="다음 달"
               >
                 <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <button
+                onClick={goToToday}
+                className="text-[11px] text-gray-600 font-semibold hover:text-gray-800 transition-colors px-2"
+              >
+                오늘
+              </button>
+              <button
+                onClick={() => setCalendarView("week")}
+                className="text-[11px] text-indigo-600 font-semibold hover:text-indigo-700 transition-colors px-2"
+              >
+                주간 보기
               </button>
             </div>
 
@@ -468,7 +484,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
                     onClick={() => {
                       setSelectedDate(date);
                       setWeekOffset(getWeekOffsetFromToday(date));
-                      setShowMonthlyCalendar(false);
+                      setCalendarView("week");
                     }}
                     className={`h-8 rounded-lg text-[11px] font-medium transition-colors ${
                       isSelected
