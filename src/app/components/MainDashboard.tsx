@@ -111,28 +111,6 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const weeklyCountRoutines = selectedDateRoutines.filter(isWeeklyCountingRoutine);
   const monthlyCountRoutines = selectedDateRoutines.filter(isMonthlyCountingRoutine);
 
-  useEffect(() => {
-    const selectedDateKey = toDateKey(selectedDate);
-    console.group(`[MainDashboard][RoutineFilter] ${selectedDateKey} / filter=${activeFilter}`);
-    console.log("before filter (selectedDateRoutines)", selectedDateRoutines);
-    console.table(
-      routineMatchResults.map(({ routine, matchesToday, reason }) => ({
-        id: routine.id,
-        title: routine.title,
-        frequency: routine.frequency,
-        scheduleType: routine.scheduleType,
-        trackingType: routine.trackingType,
-        specificDays: routine.specificDays?.join(",") ?? "-",
-        matchesToday,
-        reason,
-      }))
-    );
-    console.log("after filter (todayRoutines)", todayRoutines);
-    console.log("weeklyCountRoutines", weeklyCountRoutines);
-    console.log("monthlyCountRoutines", monthlyCountRoutines);
-    console.groupEnd();
-  }, [activeFilter, monthlyCountRoutines, routineMatchResults, selectedDate, selectedDateRoutines, todayRoutines, weeklyCountRoutines]);
-
   const isRoutineDoneForSelectedDate = (routine: (typeof selectedDateRoutines)[number]) => routine.isDoneOnSelectedDate;
 
   const incompleteTodayRoutines = todayRoutines.filter(
@@ -170,6 +148,12 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
   const progressTitle = isSelectedToday
     ? "오늘 진행률"
     : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 진행률`;
+  const selectedDateRoutineTitle = isSelectedToday
+    ? "오늘 루틴"
+    : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 루틴`;
+  const selectedDateCompletedRoutineTitle = isSelectedToday
+    ? "오늘 완료한 루틴"
+    : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 완료한 루틴`;
 
   const handleQuickAdd = async () => {
     if (isQuickAdding) return;
@@ -584,7 +568,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
           {(activeFilter === "all" || activeFilter === "routine") && (
             <>
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-[12px] font-bold text-gray-600">오늘 루틴</h3>
+                <h3 className="text-[12px] font-bold text-gray-600">{selectedDateRoutineTitle}</h3>
                 <button
                   onClick={() => onNavigate("goals-routines")}
                   className="text-[11px] text-purple-700 font-semibold"
@@ -596,7 +580,7 @@ export function MainDashboard({ onNavigate }: MainDashboardProps) {
               {incompleteTodayRoutines.map((routine) => renderRoutineListItem(routine))}
 
               {completedTodayRoutines.length > 0 && (
-                <h4 className="text-[11px] font-bold text-emerald-700 mt-2 px-1">오늘 완료한 루틴</h4>
+                <h4 className="text-[11px] font-bold text-emerald-700 mt-2 px-1">{selectedDateCompletedRoutineTitle}</h4>
               )}
               {completedTodayRoutines.map((routine) => renderRoutineListItem(routine))}
 
